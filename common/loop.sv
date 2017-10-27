@@ -24,7 +24,7 @@ module loop#(
             cnt_r   <= 0;
         end
         else if (trig) begin
-            cnt_r   <= (cnt_r == lim) ? (cnt_r + 1) : 0;
+            cnt_r   <= (cnt_r == lim) ? 0 : (cnt_r + 1);
         end
     end
     
