@@ -46,6 +46,13 @@ module fc_agu#(
     
     reg     idx_rd_done_r;
     
+    wire    [10 -1 : 0][ADDR_W  -1 : 0] idx_rd_addr_d;
+    wire    [7  -1 : 0][IDX_W   -1 : 0] idx_y_d;
+    wire    [10 -1 : 0][1       -1 : 0] vld_d;
+    
+    wire    [IDX_W      -1 : 0] idx_x, idx_y;
+    assign  {idx_y, idx_x} = idx;
+    
     always @ (posedge clk) begin
         if (rst) begin
             idx_rd_addr_r <= 0;
@@ -70,10 +77,55 @@ module fc_agu#(
         end
     end
     
+    Q#(.DW(ADDR_W), .L(10)) idx_rd_addr_q (.clk, .s(idx_rd_addr ), .d(idx_rd_addr_d ));
+    Q#(.DW(IDX_W),  .L(7 )) idx_y_q       (.clk, .s(idx_y       ), .d(idx_y_d       ));
+    Q#(.DW(1),      .L(10)) vld_q         (.clk, .s(~idx_rd_done_r), .d(vld_d));
+    
+    // data buffer 
     always @ (posedge clk) begin
-        dbuf_addr_r <= {(ADDR_W - IDX_W){1'b0}, idx[IDX_W - 1 : 0]};
-        dbuf_mask   <= '1;
-        dbuf_mux    <= 2'b00;
+        dbuf_addr_r <= {(ADDR_W - IDX_W){1'b0}, idx_x};
+        dbuf_mask_r <= '1;
+        dbuf_mux_r  <= 2'b00;
+    end
+    
+    // parameter buffer
+    always @ (posedge clk) begin
+        if (~mode[1]) begin
+            pbuf_addr_r <= {{bw(BATCH)}{1'b0}, (idx_rd_addr_d[2] >> bw(BATCH))};
+            pbuf_sel_r  <= idx_rd_addr_d[2][bw(BATCH) - 1 : 0];
+        end
+        else begin
+            pbuf_addr_r <= {(ADDR_W - IDX_W){1'b0}, idx_y};
+            pbuf_sel_r  <= 0;
+        end
+    end
+    
+    // new accumulation flag
+    reg     [16 -1 : 0] new_flag_buf;
+    always @ (posedge clk) begin
+        if (rst) begin
+            new_flag_buf <= '1;
+        end
+        else if (start && conf_is_new) begin
+            new_flag_buf <= '1;
+        end
+        else if (~mode[1] && vld_d[9]) begin
+            new_flag_buf[idx_y_d[7]] <= 1'b0;
+        end
+    end
+    
+    // accumulation buffer
+    always @ (posedge clk) begin
+        if (~mode[1]) begin
+            abuf_addr_r     <= {(ADDR_W - IDX_W){1'b0}, idx_y_d[6]};
+            abuf_acc_en_r   <= {32{vld_d[9]}};
+            abuf_acc_new_r  <= new_flag_buf[idx_y_d[7]];
+        end
+        else begin
+            abuf_addr_r     <= {(ADDR_W - bw(BATCH)){1'b0}, (idx_rd_addr_d[9] >> bw(BATCH))};
+            abuf_acc_en_r   <= 1 << idx_rd_addr_d[9][bw(BATCH)-1 : 0];
+            abuf_acc_new_r  <= 1'b1;
+        end
     end
     
     assign  idx_rd_addr     = idx_rd_addr_r;

@@ -1,10 +1,10 @@
 import GLOBAL_PARAM::bw;
 import GLOBAL_PARAM::RES_W;
+import GLOBAL_PARAM::BATCH;
 
 module accum_buf#(
     parameter   DEPTH   = 256,
-    parameter   ADDR_W  = bw(DEPTH),    // please do not change this parameter
-    parameter   BATCH   = 32
+    parameter   ADDR_W  = bw(DEPTH)    // please do not change this parameter
     )(
     input       clk,
     input       rst,
@@ -18,13 +18,13 @@ module accum_buf#(
     input   [BATCH  -1 : 0][RES_W   -1 : 0] accum_data,
     
     // load intermediate result port
-    input   [ADDR_W -1 : 0]                 ld_wr_addr,
-    input   [BATCH  -1 : 0][RES_W   -1 : 0] ld_wr_data,
-    input                                   ld_wr_en,
+    input   [ADDR_W -1 : 0]                 wr_addr,
+    input   [BATCH  -1 : 0][RES_W   -1 : 0] wr_data,
+    input                                   wr_en,
     
     // store result port
-    input   [ADDR_W -1 : 0]                 sv_rd_addr,
-    output  [BATCH  -1 : 0][RES_W   -1 : 0] sv_rd_data
+    input   [ADDR_W -1 : 0]                 rd_addr,
+    output  [BATCH  -1 : 0][RES_W   -1 : 0] rd_data
     );
     
     // address and enable signal delay to sync with ram read delay
@@ -79,11 +79,11 @@ module accum_buf#(
         .a_rd_data  (accum_rd_data      ),
     
         // port B
-        .b_wr_addr  (ld_wr_addr ),
-        .b_wr_data  (ld_wr_data ),
-        .b_wr_en    (ld_wr_en   ),    
-        .b_rd_addr  (sv_rd_addr ),
-        .b_rd_data  (sv_rd_data )
+        .b_wr_addr  (wr_addr    ),
+        .b_wr_data  (wr_data    ),
+        .b_wr_en    (wr_en      ),    
+        .b_rd_addr  (rd_addr    ),
+        .b_rd_data  (rd_data    )
     );
     
 endmodule
