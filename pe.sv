@@ -56,11 +56,15 @@ module pe#(
     wire    [2          -1 : 0] dbuf_mux;   
     
     wire    [ADDR_W     -1 : 0] pbuf_addr;  
-    wire    [bw(BATCH)  -1 : 0] pbuf_sel;   
+    wire    [bw(BATCH)  -1 : 0] pbuf_sel;
+
+    wire                        mac_new_acc;
     
     wire    [ADDR_W     -1 : 0] abuf_addr;  
     wire    [BATCH      -1 : 0] abuf_acc_en;
     wire                        abuf_acc_new;
+    
+    wire    [2          -1 : 0] conf_mode;
     
     pe_agu#(
         .ADDR_W     (ADDR_W     ),
@@ -74,13 +78,13 @@ module pe#(
         .switch_idx_buf (switch_i       ), 
     
         .start          (start          ),
-        .done           (done           ),
         .mode           (mode           ),
         .idx_cnt        (idx_cnt        ),  
         .trip_cnt       (trip_cnt       ), 
         .is_new         (is_new         ),
         .pad_code       (pad_code       ), 
         .cut_y          (cut_y          ),
+        .conf_mode      (conf_mode      ),
     
         .idx_wr_data    (idx_wr_data    ),
         .idx_wr_addr    (idx_wr_addr    ),
@@ -91,7 +95,9 @@ module pe#(
         .dbuf_mux       (dbuf_mux       ), 
             
         .pbuf_addr      (pbuf_addr      ),
-        .pbuf_sel       (pbuf_sel       ), 
+        .pbuf_sel       (pbuf_sel       ),
+
+        .mac_new_acc    (mac_new_acc    ),
     
         .abuf_addr      (abuf_addr      ),  
         .abuf_acc_en    (abuf_acc_en    ),
@@ -104,6 +110,8 @@ module pe#(
     
     wire    [BATCH  -1 : 0][DATA_W -1 : 0] data_vec;
     wire    [BATCH  -1 : 0][DATA_W -1 : 0] param_vec;
+    wire    [BATCH  -1 : 0][RES_W  -1 : 0] res_vec;
+    wire    [RES_W  -1 : 0] res_sca;
     
     // parameter selection
     reg     [BATCH  -1 : 0][DATA_W -1 : 0] param_vec_sel_r;
@@ -115,7 +123,7 @@ module pe#(
     generate
         for (i = 0; i < BATCH; i = i + 1) begin: PARAM_SEL
             always @ (posedge clk) begin
-                if (~mode[1]) begin
+                if (~conf_mode[1]) begin
                     param_vec_sel_r[i] <= param_vec[pbuf_sel_d];
                 end
                 else begin
@@ -130,6 +138,8 @@ module pe#(
     wire                dbuf_mask_d;  
     wire    [2  -1 : 0] dbuf_mux_d;
     reg     [BATCH  -1 : 0][DATA_W -1 : 0] data_vec_sel_r;
+    
+    assign  share_data_out = data_vec;
     
     Pipe#(.DW(bw(BATCH)), .L(3)) dbuf_sel_pipe (.clk, 
         .s({dbuf_mask, dbuf_mux}), .d({dbuf_mask_d, dbuf_mux_d}));
@@ -158,16 +168,32 @@ module pe#(
         .DATA_W (DATA_W ),
         .RES_W  (RES_W  )
     ) mac_array_inst (
-        .clk    (clk    ),
-        .rst    (rst    ),
-    
-        .new_acc(),
-        .vec_a  (data_vec_sel_r ),
-        .vec_b  (param_vec_sel_r),
-    
-        .vec_out(),
-        .sca_out()
+        .clk        (clk            ),
+        .rst        (rst            ),
+        
+        .new_acc    (mac_new_acc    ),
+        .vec_a      (data_vec_sel_r ),
+        .vec_b      (param_vec_sel_r),
+        
+        .vec_out    (res_vec        ),
+        .sca_out    (res_sca        )
     );
+    
+    reg     [BATCH  -1 : 0][RES_W  -1 : 0 ] res_vec_sel_r;
+    
+    generate
+        for (i = 0; i < BATCH; i = i + 1) begin: RES_SEL
+            always @ (posedge clk) begin
+                if (conf_mode[1]) begin
+                    res_vec_sel_r[i] <= res_sca;
+                end
+                else begin
+                    res_vec_sel_r[i] <= res_vec[i];
+                end
+            end
+        end
+    endgenerate
+    
     
 //=============================================================================
 // Buffers
@@ -220,7 +246,7 @@ module pe#(
         .accum_en   (abuf_acc_en    ),
         .accum_new  (abuf_acc_new   ),
         .accum_addr (abuf_addr      ),
-        .accum_data (),
+        .accum_data (res_vec_sel_r  ),
     
         .wr_addr    (abuf_wr_addr   ),
         .wr_data    (abuf_wr_data   ),

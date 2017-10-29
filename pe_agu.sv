@@ -23,6 +23,7 @@ module pe_agu#(
     input               is_new,
     input   [4  -1 : 0] pad_code,   // {R, L, D, U}
     input               cut_y,
+    output  [2  -1 : 0] conf_mode,
     
     // index buffer write port
     input   [IDX_W*2    -1 : 0] idx_wr_data,
@@ -37,6 +38,8 @@ module pe_agu#(
     output  [ADDR_W     -1 : 0] pbuf_addr,  // parameter buffer address
     output  [bw(BATCH)  -1 : 0] pbuf_sel,   // parameter scalar selection 
     
+    output                      mac_new_acc,// mac array clear signal
+    
     output  [ADDR_W     -1 : 0] abuf_addr,  // accumulate buffer address
     output  [BATCH      -1 : 0] abuf_acc_en,// enable mask
     output                      abuf_acc_new
@@ -46,7 +49,8 @@ module pe_agu#(
     reg                         dbuf_mask_r;
     reg     [2          -1 : 0] dbuf_mux_r;     
     reg     [ADDR_W     -1 : 0] pbuf_addr_r;
-    reg     [bw(BATCH)  -1 : 0] pbuf_sel_r;     
+    reg     [bw(BATCH)  -1 : 0] pbuf_sel_r;
+    reg                         mac_new_acc_r;
     reg     [ADDR_W     -1 : 0] abuf_addr_r;
     reg     [BATCH      -1 : 0] abuf_acc_en_r;
     reg                         abuf_acc_new_r;
@@ -108,15 +112,15 @@ module pe_agu#(
         .conf_lim_r     (conf_lim_r     ),
         .conf_lim_d     (conf_lim_d     ),
         .conf_row_cnt   (conf_row_cnt   )
-    );
-    
+    );    
     
     wire    [IDX_ADDR_W -1 : 0] fc_idx_rd_addr;
     wire    [ADDR_W     -1 : 0] fc_dbuf_addr;
     wire                        fc_dbuf_mask;
     wire    [2          -1 : 0] fc_dbuf_mux;     
     wire    [ADDR_W     -1 : 0] fc_pbuf_addr;
-    wire    [bw(BATCH)  -1 : 0] fc_pbuf_sel;     
+    wire    [bw(BATCH)  -1 : 0] fc_pbuf_sel;
+    wire                        fc_mac_new_acc;  
     wire    [ADDR_W     -1 : 0] fc_abuf_addr;
     wire    [BATCH      -1 : 0] fc_abuf_acc_en;
     wire                        fc_abuf_acc_new;
@@ -126,10 +130,40 @@ module pe_agu#(
     wire                        conv_dbuf_mask;
     wire    [2          -1 : 0] conv_dbuf_mux;     
     wire    [ADDR_W     -1 : 0] conv_pbuf_addr;
-    wire    [bw(BATCH)  -1 : 0] conv_pbuf_sel;     
+    wire    [bw(BATCH)  -1 : 0] conv_pbuf_sel;
+    wire                        conv_mac_new_acc;    
     wire    [ADDR_W     -1 : 0] conv_abuf_addr;
     wire    [BATCH      -1 : 0] conv_abuf_acc_en;
-    wire                        conv_abuf_acc_new;   
+    wire                        conv_abuf_acc_new;
+    
+    fc_agu#(
+        .ADDR_W (ADDR_W ),
+    ) fc_agu_inst (
+        .clk            (clk            ),
+        .rst            (rst            ),
+    
+        .start          (fc_start       ),
+        .done           (fc_done        ),
+        .conf_mode      (conf_mode      ),
+        .conf_idx_cnt   (conf_idx_cnt   ),
+        .conf_is_new    (conf_is_new    ),
+    
+        .idx_rd_addr    (fc_idx_rd_addr ),
+        .idx            (fc_idx         ),
+    
+        .dbuf_addr      (fc_dbuf_addr   ),
+        .dbuf_mask      (fc_dbuf_mask   ),
+        .dbuf_mux       (fc_dbuf_mux    ),
+    
+        .pbuf_addr      (fc_pbuf_addr   ),
+        .pbuf_sel       (fc_pbuf_sel    ),
+        
+        .mac_new_acc    (fc_mac_new_acc ),
+    
+        .abuf_addr      (fc_abuf_addr   ),
+        .abuf_acc_en    (fc_abuf_acc_en ),
+        .abuf_acc_new   (fc_abuf_acc_new)
+    );
     
     always @ (posedge clk) begin
         if (conf_mode == 2'b00 || conf_mode == 2'b10) begin
@@ -138,7 +172,8 @@ module pe_agu#(
             dbuf_mask_r     <= conv_dbuf_mask;
             dbuf_mux_r      <= conv_dbuf_mux;    
             pbuf_addr_r     <= conv_pbuf_addr;
-            pbuf_sel_r      <= conv_pbuf_sel;    
+            pbuf_sel_r      <= conv_pbuf_sel;
+            mac_new_acc_r   <= conv_mac_new_acc;            
             abuf_addr_r     <= conv_abuf_addr;
             abuf_acc_en_r   <= conv_abuf_acc_en;
             abuf_acc_new_r  <= conv_abuf_acc_new;
@@ -149,7 +184,8 @@ module pe_agu#(
             dbuf_mask_r     <= fc_dbuf_mask;
             dbuf_mux_r      <= fc_dbuf_mux;    
             pbuf_addr_r     <= fc_pbuf_addr;
-            pbuf_sel_r      <= fc_pbuf_sel;    
+            pbuf_sel_r      <= fc_pbuf_sel;
+            mac_new_acc_r   <= fc_mac_new_acc;
             abuf_addr_r     <= fc_abuf_addr;
             abuf_acc_en_r   <= fc_abuf_acc_en;
             abuf_acc_new_r  <= fc_abuf_acc_new;
@@ -176,7 +212,8 @@ module pe_agu#(
     assign  dbuf_mask       = dbuf_mask_r;     
     assign  dbuf_mux        = dbuf_mux_r;      
     assign  pbuf_addr       = pbuf_addr_r;     
-    assign  pbuf_sel        = pbuf_sel_r;      
+    assign  pbuf_sel        = pbuf_sel_r;
+    assign  mac_new_acc     = mac_new_acc_r;
     assign  abuf_addr       = abuf_addr_r;     
     assign  abuf_acc_en     = abuf_acc_en_r;   
     assign  abuf_acc_new    = abuf_acc_new_r;

@@ -26,6 +26,8 @@ module fc_agu#(
     output  [ADDR_W     -1 : 0] pbuf_addr,  // parameter buffer address
     output  [bw(BATCH)  -1 : 0] pbuf_sel,   // parameter scalar selection 
     
+    output                      mac_new_acc,
+    
     output  [ADDR_W     -1 : 0] abuf_addr,  // accumulate buffer address
     output  [BATCH      -1 : 0] abuf_acc_en,// enable mask
     output                      abuf_acc_new
@@ -123,7 +125,7 @@ module fc_agu#(
         end
         else begin
             abuf_addr_r     <= {(ADDR_W - bw(BATCH)){1'b0}, (idx_rd_addr_d[9] >> bw(BATCH))};
-            abuf_acc_en_r   <= 1 << idx_rd_addr_d[9][bw(BATCH)-1 : 0];
+            abuf_acc_en_r   <= vld_d[9] ? (1 << idx_rd_addr_d[9][bw(BATCH)-1 : 0]) : 0;
             abuf_acc_new_r  <= 1'b1;
         end
     end
@@ -133,7 +135,8 @@ module fc_agu#(
     assign  dbuf_mask       = dbuf_mask_r;
     assign  dbuf_mux        = dbuf_mux_r;    
     assign  pbuf_addr       = pbuf_addr_r;
-    assign  pbuf_sel        = pbuf_sel_r;    
+    assign  pbuf_sel        = pbuf_sel_r;
+    assign  mac_new_acc     = 1'b0;
     assign  abuf_addr       = abuf_addr_r;
     assign  abuf_acc_en     = abuf_acc_en_r;
     assign  abuf_acc_new    = abuf_acc_new_r;
