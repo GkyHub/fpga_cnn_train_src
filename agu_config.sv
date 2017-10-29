@@ -55,7 +55,7 @@ module agu_config(
             conf_is_new_r   <= is_new;
             conf_pad_u_r    <= pad_code[0];
             conf_pad_l_r    <= pad_code[2];
-            conf_row_cnt_r  <= (trip_cnt >> 1) + trip_cnt[0];
+            conf_row_cnt_r  <= (trip_cnt >> 1) + trip_cnt[0] - 1;
             
             case(pad_code[1 : 0])
             2'b00: conf_lim_d <= 3 - cut_y;
