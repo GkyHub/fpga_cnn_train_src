@@ -12,7 +12,13 @@ module conv_agu#(
     output  done,
     input   [2  -1 : 0] conf_mode,
     input   [8  -1 : 0] conf_idx_cnt,   // number of idx to deal with
+    input   [8  -1 : 0] conf_trip_cnt,
     input               conf_is_new,
+    input               conf_pad_u,
+    input               conf_pad_l,
+    input   [6  -1 : 0] conf_lim_r,
+    input   [6  -1 : 0] conf_lim_d,
+    input   [6  -1 : 0] conf_row_cnt,
     
     // index read port
     output  [ADDR_W     -1 : 0] idx_rd_addr,
@@ -32,5 +38,11 @@ module conv_agu#(
     output  [BATCH      -1 : 0] abuf_acc_en,// enable mask
     output                      abuf_acc_new
     );
+    
+    always @ (posedge clk) begin
+    
+    
+    end
+    
     
 endmodule
