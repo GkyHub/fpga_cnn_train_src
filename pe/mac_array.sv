@@ -43,8 +43,6 @@ module mac_array#(
         .RES_W  (RES_W      )
     ) adder_tree_inst (
         .clk    (clk        ),
-        .rst    (1'b0       ),
-        .clk_en (1'b1       ),
         .vec    (vec_out    ),
         .sum    (sca_out    )
     );

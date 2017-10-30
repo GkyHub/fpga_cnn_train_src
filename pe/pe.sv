@@ -83,6 +83,7 @@ module pe#(
     
         .start          (start          ),
         .mode           (mode           ),
+        .done           (done           ),
         .idx_cnt        (idx_cnt        ),  
         .trip_cnt       (trip_cnt       ), 
         .is_new         (is_new         ),
@@ -145,7 +146,7 @@ module pe#(
     
     assign  share_data_out = data_vec;
     
-    Pipe#(.DW(bw(BATCH)), .L(3)) dbuf_sel_pipe (.clk, 
+    Pipe#(.DW(3), .L(3)) dbuf_sel_pipe (.clk, 
         .s({dbuf_mask, dbuf_mux}), .d({dbuf_mask_d, dbuf_mux_d}));
         
     generate
@@ -248,7 +249,7 @@ module pe#(
         .switch (switch_a       ),
     
         .accum_en   (abuf_acc_en    ),
-        .accum_new  (abuf_acc_new   ),
+        .accum_new  ({BATCH{abuf_acc_new}}),
         .accum_addr (abuf_addr      ),
         .accum_data (res_vec_sel_r  ),
     

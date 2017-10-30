@@ -101,6 +101,9 @@ module pe_agu#(
         .is_new     (is_new     ),
         .pad_code   (pad_code   ), 
         .cut_y      (cut_y      ),
+        
+        .start_conv (start_conv ),
+        .start_fc   (start_fc   ),
     
         .conf_mode      (conf_mode      ),
         .conf_idx_cnt   (conf_idx_cnt   ), 
@@ -141,7 +144,7 @@ module pe_agu#(
         .clk            (clk            ),
         .rst            (rst            ),
     
-        .start          (fc_start       ),
+        .start          (start_fc       ),
         .done           (fc_done        ),
         .conf_mode      (conf_mode      ),
         .conf_idx_cnt   (conf_idx_cnt   ),
@@ -172,7 +175,7 @@ module pe_agu#(
         .clk            (clk            ),
         .rst            (rst            ),
     
-        .start          (conv_start     ),
+        .start          (start_conv     ),
         .done           (conv_done      ),
         .conf_mode      (conf_mode      ),
         .conf_idx_cnt   (conf_idx_cnt   ), 
