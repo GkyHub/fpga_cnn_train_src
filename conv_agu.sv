@@ -128,13 +128,39 @@ module conv_agu#(
     end
     
 //=============================================================================
-// Calculate address
+// Calculate index buffer address
+//=============================================================================
+    reg     [ADDR_W -1 : 0] idx_rd_addr_r;
+
+    always @ (posedge clk) begin
+        if (start) begin
+            idx_rd_addr_r <= 0;
+        end
+        else if (next_channel_r) begin
+            idx_rd_addr_r <= idx_rd_addr_r + 1;
+        end        
+    end
+    
+    assign  idx_rd_addr = idx_rd_addr_r;
+    
+//=============================================================================
+// Calculate data buffer address
 //=============================================================================
 
     wire    [IDX_W  -1 : 0] idx_x, idx_y;
     assign  {idx_y, idx_x} = idx;
     
-    reg     [2 : 0] 
+    reg     [2 : 0] ker_x_d0_r, ker_y_d0_r;
+    reg     [2 : 0] ker_x_d1_r, ker_y_d1_r;
+    reg     [3 : 0] pix_cnt_d_r;
+    
+    always @ (posedge clk) begin
+        ker_x_d0_r <= ker_x_r;
+        ker_x_d1_r <= ker_x_d0_r;
+        ker_y_d0_r <= ker_y_r;
+        ker_y_d1_r <= ker_y_d0_r;
+        pix_cnt_d_r<= pix_cnt_r;
+    end
     
     signed reg  [3 : 0] win_y_r
     signed reg  [5 : 0] win_x_r;
@@ -142,8 +168,8 @@ module conv_agu#(
     signed reg  [5 : 0] pe_x_r;
     
     always @ (posedge clk) begin
-        win_y_r <= ker_y_r - (conf_pad_u ? 1 : 0);
-        win_x_r <= ker_x_r - (conf_pad_l ? 1 : 0) + (pix_cnt_r << 1);
+        win_y_r <= ker_y_d1_r - (conf_pad_u ? 1 : 0);
+        win_x_r <= ker_x_d1_r - (conf_pad_l ? 1 : 0) + (pix_cnt_d_r << 1);
     end
     
     always @ (posedge clk) begin
@@ -152,18 +178,91 @@ module conv_agu#(
     end
     
     // padding mask
-    reg     pad_mask_r;
+    reg     pad_mask_r, dbuf_mask_r;
     always @ (posedge clk) begin
         pad_mask_r <= (win_x_r >= 0) && (win_x_r <= conf_lim_r) &&
                       (win_y_r >= 0) && (win_y_r <= conf_lim_d);
+        dbuf_mask_r<= pad_mask_r;
     end
+    assign  dbuf_mask = dbuf_mask_r;
     
     // shared data mux
     wire    [1 : 0] mux;
     assign  mux[0] = win_x_r[0];
     assign  mux[1] = win_y_r[0];
     
-    // address
-    reg     [4 : 0] addr
+    Pipe#(.DW(2), .L(2)) mux_pipe (.clk, .s(mux), .d(dbuf_mux));
     
+    // address
+    reg     [4 -1 : 0] dbuf_addr_r;
+    always @ (posedge clk) begin
+        // y coordinate
+        dbuf_addr_r[3 : 3] <= pe_y_r[1];
+        // x coordinate
+        dbuf_addr_r[2 : 0] <= pe_x_r[3 : 1];
+    end    
+    assign  dbuf_addr = {idx_x, dbuf_addr_r};    
+    
+//=============================================================================
+// Calculate parameter buffer address
+//============================================================================= 
+    
+    reg     [ADDR_W -1 : 0] pbuf_addr_conv_r;
+    reg     [ADDR_W -1 : 0] pbuf_addr_uconv_r;
+    wire    start_d;
+    wire    next_channel_d;
+    wire    next_pix_d;
+    
+    Pipe#(.DW(1), .L(4)) start_pipe (.clk, .s(start), .d(start_d));
+    Pipe#(.DW(1), .L(3)) np_pipe    (.clk, .s(next_pix_r), .d(next_pix_d));    
+    Pipe#(.DW(1), .L(2)) nc_pipe    (.clk, .s(next_channel_r), .d(next_channel_d));
+    
+    // address
+    always @ (posedge clk) begin
+        if (start_d) begin
+            pbuf_addr_conv_r <= 0;
+        end
+        else if (next_pix_d && !next_channel_d) begin
+                pbuf_addr_conv_r <= pbuf_addr_conv_r - 8;
+            end
+            else begin
+                pbuf_addr_conv_r <= pbuf_addr_conv_r + 1;
+            end
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (start_d) begin
+            pbuf_addr_uconv_r <= 0;
+        end
+        else if (next_pix_d) begin
+            if (next_channel_d) begin
+                pbuf_addr_uconv_r[3 : 0] <= 0;
+                pbuf_addr_uconv_r[ADDR_W-1 : 4] <= pbuf_addr_uconv_r[ADDR_W-1 : 4] + 1;
+            end
+            else begin
+                pbuf_addr_uconv_r <= pbuf_addr_uconv_r + 1;
+            end
+        end
+    end
+    
+    // select from 2 modes
+    reg     [ADDR_W     -1 : 0] pbuf_addr_r;
+    reg     [bw(BATCH)  -1 : 0] pbuf_sel_r;
+    
+    always @ (posedge clk) begin
+        if (~mode[1]) begin // CONV mode
+            pbuf_addr_r <= {{(bw(BATCH)){1'b0}}, pbuf_addr_conv_r[ADDR_W-1 : bw(BATCH)]};
+            pbuf_sel_r  <= pbuf_addr_r[bw(BATCH) -1 : 0];
+        end
+        else begin
+            pbuf_addr_r <= pbuf_addr_uconv_r;
+            pbuf_sel_r  <= 0;
+        end
+    end
+    
+    assign  pbuf_addr   = pbuf_addr_r;
+    assign  pbuf_sel    = pbuf_sel_r;
+   
+   
 endmodule
