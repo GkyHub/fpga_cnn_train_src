@@ -85,19 +85,19 @@ module fc_agu#(
     
     // data buffer 
     always @ (posedge clk) begin
-        dbuf_addr_r <= {(ADDR_W - IDX_W){1'b0}, idx_x};
+        dbuf_addr_r <= {{(ADDR_W - IDX_W){1'b0}}, idx_x};
         dbuf_mask_r <= '1;
         dbuf_mux_r  <= 2'b00;
     end
     
     // parameter buffer
     always @ (posedge clk) begin
-        if (~mode[1]) begin
-            pbuf_addr_r <= {{bw(BATCH)}{1'b0}, (idx_rd_addr_d[2] >> bw(BATCH))};
+        if (~conf_mode[1]) begin
+            pbuf_addr_r <= {{bw(BATCH){1'b0}}, (idx_rd_addr_d[2] >> bw(BATCH))};
             pbuf_sel_r  <= idx_rd_addr_d[2][bw(BATCH) - 1 : 0];
         end
         else begin
-            pbuf_addr_r <= {(ADDR_W - IDX_W){1'b0}, idx_y};
+            pbuf_addr_r <= {{(ADDR_W - IDX_W){1'b0}}, idx_y};
             pbuf_sel_r  <= 0;
         end
     end
@@ -111,20 +111,20 @@ module fc_agu#(
         else if (start && conf_is_new) begin
             new_flag_buf <= '1;
         end
-        else if (~mode[1] && vld_d[9]) begin
+        else if (~conf_mode[1] && vld_d[9]) begin
             new_flag_buf[idx_y_d[7]] <= 1'b0;
         end
     end
     
     // accumulation buffer
     always @ (posedge clk) begin
-        if (~mode[1]) begin
-            abuf_addr_r     <= {(ADDR_W - IDX_W){1'b0}, idx_y_d[6]};
+        if (~conf_mode[1]) begin
+            abuf_addr_r     <= {{(ADDR_W - IDX_W){1'b0}}, idx_y_d[6]};
             abuf_acc_en_r   <= {32{vld_d[9]}};
             abuf_acc_new_r  <= new_flag_buf[idx_y_d[7]];
         end
         else begin
-            abuf_addr_r     <= {(ADDR_W - bw(BATCH)){1'b0}, (idx_rd_addr_d[9] >> bw(BATCH))};
+            abuf_addr_r     <= {{(ADDR_W - bw(BATCH)){1'b0}}, (idx_rd_addr_d[9] >> bw(BATCH))};
             abuf_acc_en_r   <= vld_d[9] ? (1 << idx_rd_addr_d[9][bw(BATCH)-1 : 0]) : 0;
             abuf_acc_new_r  <= 1'b1;
         end

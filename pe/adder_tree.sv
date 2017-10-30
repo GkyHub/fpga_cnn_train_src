@@ -21,12 +21,7 @@ module adder_tree#(
         genvar i;
         for (i = 0; i < DATA_N - 1; i = i + 1) begin: HEAP
             always @ (posedge clk) begin
-                if (rst) begin
-                    local_res[i] <= 0;
-                end
-                else if (clk_en) begin
-                    local_res[i] <= local_res[i*2+1] + local_res[i*2+2];
-                end
+                local_res[i] <= local_res[i*2+1] + local_res[i*2+2];
             end
         end
         
@@ -35,12 +30,7 @@ module adder_tree#(
             wire    [DATA_W -1 : 0] op = vec[i*DATA_W+:DATA_W];
             
             always @ (posedge clk) begin
-                if (rst) begin
-                    local_res[i+DATA_N-1] = 0;
-                end
-                else if (clk_en) begin
-                    local_res[i+DATA_N-1] = `SIGN_EXT(op, RES_W, DATA_W);
-                end
+                local_res[i+DATA_N-1] = `SIGN_EXT(op, RES_W, DATA_W);
             end
         end
     endgenerate

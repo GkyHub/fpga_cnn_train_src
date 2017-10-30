@@ -177,12 +177,12 @@ module conv_agu#(
             done_r <= 1'b0;
         end
         else if (~conf_mode[0]) begin
-            if (last_r[3]) begin
+            if (last_d[3]) begin
                 done_r <= 1'b1;
             end
         end
         else begin
-            if (last_r[8]) begin
+            if (last_d[8]) begin
                 done_r <= 1'b1;
             end
         end
@@ -225,10 +225,10 @@ module conv_agu#(
         pix_cnt_d_r<= pix_cnt_r;
     end
     
-    signed reg  [3 : 0] win_y_r
-    signed reg  [5 : 0] win_x_r;
-    signed reg  [3 : 0] pe_y_r;
-    signed reg  [5 : 0] pe_x_r;
+    reg signed  [3 : 0] win_y_r;
+    reg signed  [5 : 0] win_x_r;
+    reg signed  [3 : 0] pe_y_r;
+    reg signed  [5 : 0] pe_x_r;
     
     always @ (posedge clk) begin
         win_y_r <= ker_y_d1_r - (conf_pad_u ? 1 : 0);
@@ -278,12 +278,11 @@ module conv_agu#(
         if (start_d[5]) begin
             pbuf_addr_conv_r <= 0;
         end
-        else if (next_pix_d[3] && !next_channel_d[2]) begin
+        else if (next_pix_d[3] && !next_ch_d[2]) begin
                 pbuf_addr_conv_r <= pbuf_addr_conv_r - 8;
-            end
-            else begin
-                pbuf_addr_conv_r <= pbuf_addr_conv_r + 1;
-            end
+        end
+        else begin
+            pbuf_addr_conv_r <= pbuf_addr_conv_r + 1;
         end
     end
     
@@ -292,7 +291,7 @@ module conv_agu#(
             pbuf_addr_uconv_r <= 0;
         end
         else if (next_pix_d[3]) begin
-            if (next_channel_d[2]) begin
+            if (next_ch_d[2]) begin
                 pbuf_addr_uconv_r <= 0;
             end
             else begin
@@ -337,7 +336,7 @@ module conv_agu#(
             abuf_addr_uconv_step_r <= 0;
         end
         else if (next_pix_d[7]) begin
-            if (next_channel_d[6]) begin
+            if (next_ch_d[6]) begin
                 abuf_addr_uconv_step_r <= 17;
             end
             else begin
@@ -353,7 +352,7 @@ module conv_agu#(
         if (start_d[10]) begin
             abuf_addr_uconv_r <= 8;
         end
-        else 
+        else begin
             abuf_addr_uconv_r <= abuf_addr_uconv_r + abuf_addr_uconv_step_r;
         end
     end
@@ -373,7 +372,7 @@ module conv_agu#(
         else if (start && conf_is_new) begin
             new_flag_buf <= '1;
         end
-        else if (~mode[1] && next_ch_d[3]) begin
+        else if (~conf_mode[1] && next_ch_d[3]) begin
             new_flag_buf[idx_y_d] <= 1'b0;
         end
     end    

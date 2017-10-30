@@ -18,7 +18,7 @@ module agu_config(
     output              conf_pad_l,
     output  [6  -1 : 0] conf_lim_r,
     output  [6  -1 : 0] conf_lim_d,
-    output  [6  -1 : 0] conf_row_cnt
+    output  [6  -1 : 0] conf_row_cnt,
     
     output              start_fc,
     output              start_conv
@@ -58,17 +58,17 @@ module agu_config(
             conf_row_cnt_r  <= (trip_cnt >> 1) + trip_cnt[0] - 1;
             
             case(pad_code[1 : 0])
-            2'b00: conf_lim_d <= 3 - cut_y;
-            2'b01: conf_lim_d <= 2 - cut_y;
-            2'b10: conf_lim_d <= 2 - cut_y;
-            2'b11: conf_ilm_d <= 1 - cut_y;
+            2'b00: conf_lim_d_r <= 3 - cut_y;
+            2'b01: conf_lim_d_r <= 2 - cut_y;
+            2'b10: conf_lim_d_r <= 2 - cut_y;
+            2'b11: conf_lim_d_r <= 1 - cut_y;
             endcase
             
             case(pad_code[1 : 0])
-            2'b00: conf_lim_r <= trip_cnt + 1;
-            2'b01: conf_lim_r <= trip_cnt;
-            2'b10: conf_lim_r <= trip_cnt;
-            2'b11: conf_ilm_r <= trip_cnt - 1;
+            2'b00: conf_lim_r_r <= trip_cnt + 1;
+            2'b01: conf_lim_r_r <= trip_cnt;
+            2'b10: conf_lim_r_r <= trip_cnt;
+            2'b11: conf_lim_r_r <= trip_cnt - 1;
             endcase
         end
     end

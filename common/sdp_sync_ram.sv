@@ -3,7 +3,7 @@
 //  This code implements a parameterizable SDP single clock memory.
 //  If a reset or enable is not necessary, it may be tied off or removed from the code.
 
-import GLB_PARAM::bw;
+import GLOBAL_PARAM::bw;
 
 module sdp_sync_ram #(
     parameter NB_COL            = 8,                    // Specify number of columns (number of bytes)

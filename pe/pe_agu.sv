@@ -3,7 +3,7 @@ import GLOBAL_PARAM::IDX_W;
 import GLOBAL_PARAM::BATCH;
 
 module pe_agu#(
-    parameter   ADDR_W      = 8
+    parameter   ADDR_W      = 8,
     parameter   IDX_DEPTH   = 256,
     parameter   IDX_ADDR_W  = bw(IDX_DEPTH),
     parameter   GRP_ID_X    = 0,
@@ -60,7 +60,6 @@ module pe_agu#(
     
     wire    [IDX_W * 2  -1 : 0] idx_rd_data;
     
-    wire    [2  -1 : 0] conf_mode;
     wire    [8  -1 : 0] conf_idx_cnt; 
     wire    [8  -1 : 0] conf_trip_cnt;
     wire                conf_is_new;
@@ -137,7 +136,7 @@ module pe_agu#(
     wire                        conv_abuf_acc_new;
     
     fc_agu#(
-        .ADDR_W (ADDR_W ),
+        .ADDR_W (ADDR_W )
     ) fc_agu_inst (
         .clk            (clk            ),
         .rst            (rst            ),

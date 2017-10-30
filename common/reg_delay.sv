@@ -1,6 +1,6 @@
 module RQ#(
     parameter   DW  = 1,
-    parameter   L   = 4,
+    parameter   L   = 4
     )(
     input   clk,
     input   rst,
@@ -33,7 +33,7 @@ endmodule
 
 module Q#(
     parameter   DW  = 1,
-    parameter   L   = 4,
+    parameter   L   = 4
     )(
     input   clk,
     
@@ -58,7 +58,7 @@ endmodule
 
 module RPipe#(
     parameter   DW  = 1,
-    parameter   L   = 4,
+    parameter   L   = 4
     )(
     input   clk,
     input   rst,
@@ -91,7 +91,7 @@ endmodule
 
 module Pipe#(
     parameter   DW  = 1,
-    parameter   L   = 4,
+    parameter   L   = 4
     )(
     input   clk,
     

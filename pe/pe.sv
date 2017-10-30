@@ -1,6 +1,8 @@
 import  GLOBAL_PARAM::DATA_W;
 import  GLOBAL_PARAM::BATCH;
 import  GLOBAL_PARAM::RES_W;
+import  GLOBAL_PARAM::IDX_W;
+import  GLOBAL_PARAM::bw;
 
 module pe#(
     parameter   GRP_ID_X    = 0,
@@ -25,8 +27,8 @@ module pe#(
     input   [4  -1 : 0] pad_code, 
     input               cut_y,
     
-    input   [3 : 0][DATA_W * BATCH  -1 : 0] share_data_in;
-    output  [DATA_W * BATCH -1 : 0] share_data_out;
+    input   [3 : 0][DATA_W * BATCH  -1 : 0] share_data_in,
+    output  [DATA_W * BATCH -1 : 0] share_data_out,
     
     input   [IDX_W*2        -1 : 0] idx_wr_data,
     input   [bw(IDX_DEPTH)  -1 : 0] idx_wr_addr,
@@ -46,6 +48,8 @@ module pe#(
     input   [bw(BUF_DEPTH)  -1 : 0] abuf_rd_addr,
     output  [BATCH * RES_W  -1 : 0] abuf_rd_data
     );
+    
+    localparam ADDR_W   = 8;
     
 //=============================================================================
 // Address Generation Unit

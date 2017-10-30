@@ -84,7 +84,7 @@ module dual_port_ping_pong_ram#(
         .RAM_PERFORMANCE("HIGH_PERFORMANCE" ),
         .RAM_TYPE       (RAM_TYPE           ),
         .INIT_FILE      (""                 ) 
-    ) ram_inst_1 (
+    ) ram_inst_2 (
         .addra  ({flag_r, wr_addr_2_r}  ),
         .addrb  ({~flag_r, rd_addr_2_r} ),
         .dina   (wr_data_2_r            ), 
