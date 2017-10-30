@@ -50,6 +50,7 @@ module conv_agu#(
     // 2-dim counter for kernel x, y
     reg     [2 : 0] ker_x_r, ker_y_r;
     reg     next_pix_r;
+    wire    [8 : 0] next_pix_d;
     
     always @ (posedge clk) begin
         if (rst) begin
@@ -77,6 +78,7 @@ module conv_agu#(
     // pixel row counter
     reg     [3 : 0] pix_cnt_r;
     reg     next_channel_r;
+    wire    [7 : 0] next_ch_d;
     
     always @ (posedge clk) begin
         if (rst) begin
@@ -115,6 +117,10 @@ module conv_agu#(
     end
     
     // working status
+    wire    [10: 0] start_d;
+    wire    [7 : 0] valid_d;
+    reg     valid_r;
+    
     always @ (posedge clk) begin
         if (rst) begin
             working_r <= 1'b0;
@@ -126,6 +132,63 @@ module conv_agu#(
             working_r <= 1'b0;
         end
     end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            valid_r <= 1'b0;
+        end
+        else if (start_d[2]) begin
+            valid_r <= 1'b1;
+        end
+        else if (channel_cnt_r == conf_trip_cnt && next_channel_r) begin
+            valid_r <= 1'b0;
+        end
+    end
+    
+    reg     last_r;
+    wire    [8 : 0] last_d;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            last_r <= 1'b0;
+        end
+        else if (channel_cnt_r == conf_trip_cnt && next_channel_r) begin
+            last_r <= 1'b1;
+        end
+        else begin
+            last_r <= 1'b0;
+        end
+    end
+    
+    RQ#(.DW(1),.L(11)) start_q (.clk, .rst, .s(start),   .d(start_d));
+    RQ#(.DW(1), .L(8)) valid_q (.clk, .rst, .s(valid_r), .d(valid_d));
+    RQ#(.DW(1), .L(9)) last_q  (.clk, .rst, .s(last_r),  .d(last_d));
+    RQ#(.DW(1), .L(8)) next_ch_q  (.clk, .rst, .s(next_channel_r), .d(next_ch_d));
+    RQ#(.DW(1), .L(9)) next_pix_q (.clk, .rst, .s(next_pix_r),     .d(next_pix_d));    
+    
+    // done signal
+    reg     done_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            done_r <= 1'b1;
+        end
+        else if (start) begin
+            done_r <= 1'b0;
+        end
+        else if (~conf_mode[0]) begin
+            if (last_r[3]) begin
+                done_r <= 1'b1;
+            end
+        end
+        else begin
+            if (last_r[8]) begin
+                done_r <= 1'b1;
+            end
+        end
+    end
+    
+    assign  done = done_r;
     
 //=============================================================================
 // Calculate index buffer address
@@ -201,28 +264,21 @@ module conv_agu#(
         // x coordinate
         dbuf_addr_r[2 : 0] <= pe_x_r[3 : 1];
     end    
-    assign  dbuf_addr = {idx_x, dbuf_addr_r};    
+    assign  dbuf_addr = {idx_x, dbuf_addr_r};
     
 //=============================================================================
 // Calculate parameter buffer address
 //============================================================================= 
     
     reg     [ADDR_W -1 : 0] pbuf_addr_conv_r;
-    reg     [ADDR_W -1 : 0] pbuf_addr_uconv_r;
-    wire    start_d;
-    wire    next_channel_d;
-    wire    next_pix_d;
-    
-    Pipe#(.DW(1), .L(4)) start_pipe (.clk, .s(start), .d(start_d));
-    Pipe#(.DW(1), .L(3)) np_pipe    (.clk, .s(next_pix_r), .d(next_pix_d));    
-    Pipe#(.DW(1), .L(2)) nc_pipe    (.clk, .s(next_channel_r), .d(next_channel_d));
+    reg     [4      -1 : 0] pbuf_addr_uconv_r;
     
     // address
     always @ (posedge clk) begin
-        if (start_d) begin
+        if (start_d[5]) begin
             pbuf_addr_conv_r <= 0;
         end
-        else if (next_pix_d && !next_channel_d) begin
+        else if (next_pix_d[3] && !next_channel_d[2]) begin
                 pbuf_addr_conv_r <= pbuf_addr_conv_r - 8;
             end
             else begin
@@ -232,13 +288,12 @@ module conv_agu#(
     end
     
     always @ (posedge clk) begin
-        if (start_d) begin
+        if (start_d[5]) begin
             pbuf_addr_uconv_r <= 0;
         end
-        else if (next_pix_d) begin
-            if (next_channel_d) begin
-                pbuf_addr_uconv_r[3 : 0] <= 0;
-                pbuf_addr_uconv_r[ADDR_W-1 : 4] <= pbuf_addr_uconv_r[ADDR_W-1 : 4] + 1;
+        else if (next_pix_d[3]) begin
+            if (next_channel_d[2]) begin
+                pbuf_addr_uconv_r <= 0;
             end
             else begin
                 pbuf_addr_uconv_r <= pbuf_addr_uconv_r + 1;
@@ -250,13 +305,14 @@ module conv_agu#(
     reg     [ADDR_W     -1 : 0] pbuf_addr_r;
     reg     [bw(BATCH)  -1 : 0] pbuf_sel_r;
     
-    always @ (posedge clk) begin
-        if (~mode[1]) begin // CONV mode
+    always_comb begin
+        if (~conf_mode[1]) begin // CONV mode
             pbuf_addr_r <= {{(bw(BATCH)){1'b0}}, pbuf_addr_conv_r[ADDR_W-1 : bw(BATCH)]};
             pbuf_sel_r  <= pbuf_addr_r[bw(BATCH) -1 : 0];
         end
         else begin
-            pbuf_addr_r <= pbuf_addr_uconv_r;
+            pbuf_addr_r[3 : 0] <= pbuf_addr_uconv_r;
+            pbuf_addr_r[ADDR_W-1 : 4] <= idx_y;
             pbuf_sel_r  <= 0;
         end
     end
@@ -264,5 +320,98 @@ module conv_agu#(
     assign  pbuf_addr   = pbuf_addr_r;
     assign  pbuf_sel    = pbuf_sel_r;
    
+//=============================================================================
+// Calculate accumulation buffer address
+//=============================================================================
+    reg     [ADDR_W -1 : 0] abuf_addr_conv_r;
+    reg     [ADDR_W -1 : 0] abuf_addr_uconv_r;
+    wire    [ADDR_W -1 : 0] abuf_addr_uconv_d;
+    reg     [ADDR_W -1 : 0] abuf_addr_uconv_step_r;
+    
+    always @ (posedge clk) begin
+        abuf_addr_conv_r <= pbuf_addr_uconv_r;
+    end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            abuf_addr_uconv_step_r <= 0;
+        end
+        else if (next_pix_d[7]) begin
+            if (next_channel_d[6]) begin
+                abuf_addr_uconv_step_r <= 17;
+            end
+            else begin
+                abuf_addr_uconv_step_r <= 8;
+            end
+        end
+        else begin
+            abuf_addr_uconv_step_r <= -1;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (start_d[10]) begin
+            abuf_addr_uconv_r <= 8;
+        end
+        else 
+            abuf_addr_uconv_r <= abuf_addr_uconv_r + abuf_addr_uconv_step_r;
+        end
+    end
+
+    // new accumulation flag
+    reg     [16 -1 : 0] new_flag_buf;
+    reg     [4  -1 : 0] idx_y_d;
+    
+    always @ (posedge clk) begin
+        idx_y_d <= idx_y;
+    end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            new_flag_buf <= '1;
+        end
+        else if (start && conf_is_new) begin
+            new_flag_buf <= '1;
+        end
+        else if (~mode[1] && next_ch_d[3]) begin
+            new_flag_buf[idx_y_d] <= 1'b0;
+        end
+    end    
+    
+    reg     [ADDR_W -1 : 0] abuf_addr_r;
+    reg     [BATCH  -1 : 0] abuf_acc_en_r;
+    reg                     abuf_acc_new_r;
+    
+    always @ (posedge clk) begin
+        if (~conf_mode[1]) begin
+            abuf_addr_r     <= abuf_addr_conv_r;
+            abuf_acc_en_r   <= {32{valid_d[3] && next_pix_d[5]}};
+            abuf_acc_new_r  <= new_flag_buf[idx_y_d];
+        end
+        else begin
+            abuf_addr_r     <= {{(bw(BATCH)){1'b0}}, abuf_addr_uconv_r[ADDR_W-1 : bw(BATCH)]};
+            abuf_acc_en_r   <= valid_d[7] ? (1 << abuf_addr_uconv_r[bw(BATCH)-1 : 0]) : 0;
+            abuf_acc_new_r  <= 1'b0;
+        end
+    end
+
+//=============================================================================
+// Clear MAC array signal
+//=============================================================================    
+    reg     mac_new_acc_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            mac_new_acc_r <= 1'b1;
+        end
+        else if (~conf_mode[1]) begin
+            mac_new_acc_r <= (start_d[7] || next_pix_d[5]);
+        end
+        else begin
+            mac_new_acc_r <= 1'b1;
+        end
+    end
+    
+    assign  mac_new_acc = mac_new_acc_r;    
    
 endmodule

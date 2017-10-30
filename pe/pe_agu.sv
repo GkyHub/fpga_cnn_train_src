@@ -149,7 +149,7 @@ module pe_agu#(
         .conf_is_new    (conf_is_new    ),
     
         .idx_rd_addr    (fc_idx_rd_addr ),
-        .idx            (fc_idx         ),
+        .idx            (idx_rd_data    ),
     
         .dbuf_addr      (fc_dbuf_addr   ),
         .dbuf_mask      (fc_dbuf_mask   ),
@@ -163,6 +163,43 @@ module pe_agu#(
         .abuf_addr      (fc_abuf_addr   ),
         .abuf_acc_en    (fc_abuf_acc_en ),
         .abuf_acc_new   (fc_abuf_acc_new)
+    );
+    
+    conv_agu#(
+        .ADDR_W     (ADDR_W     ),
+        .GRP_ID_Y   (GRP_ID_X   ),
+        .GRP_ID_X   (GRP_ID_Y   )
+    ) conv_agu_inst (
+        .clk            (clk            ),
+        .rst            (rst            ),
+    
+        .start          (conv_start     ),
+        .done           (conv_done      ),
+        .conf_mode      (conf_mode      ),
+        .conf_idx_cnt   (conf_idx_cnt   ), 
+        .conf_trip_cnt  (conf_trip_cnt  ),
+        .conf_is_new    (conf_is_new    ),
+        .conf_pad_u     (conf_pad_u     ),
+        .conf_pad_l     (conf_pad_l     ),
+        .conf_lim_r     (conf_lim_r     ),
+        .conf_lim_d     (conf_lim_d     ),
+        .conf_row_cnt   (conf_row_cnt   ),
+    
+        .idx_rd_addr    (conv_idx_rd_addr),
+        .idx            (idx_rd_data    ),
+    
+        .dbuf_addr      (conv_dbuf_addr ),
+        .dbuf_mask      (conv_dbuf_mask ),
+        .dbuf_mux       (conv_dbuf_mux  ), 
+    
+        .pbuf_addr      (conv_pbuf_addr ), 
+        .pbuf_sel       (conv_pbuf_sel  ), 
+    
+        .mac_new_acc    (conv_mac_new_acc),
+    
+        .abuf_addr      (conv_abuf_addr   ),
+        .abuf_acc_en    (conv_abuf_acc_en ),
+        .abuf_acc_new   (conv_abuf_acc_new)
     );
     
     always @ (posedge clk) begin
