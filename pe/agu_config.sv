@@ -79,7 +79,7 @@ module agu_config(
             start_fc_r  <= 1'b0;
         end
         else if (start) begin
-            if (mode == 2'b01 || 2'b11) begin
+            if (mode == 2'b01 || mode == 2'b11) begin
                 start_fc_r <= 1'b1;
             end
             else begin

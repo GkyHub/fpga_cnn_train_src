@@ -231,6 +231,29 @@ module pe_agu#(
         end
     end
     
+    localparam  ST_IDLE    = 2'b00;
+    localparam  ST_CONFIG  = 2'b01;
+    localparam  ST_WORK    = 2'b10;
+    
+    reg     [1 : 0] stat_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            stat_r <= 2'b00;
+        end
+        else begin
+            case(stat_r)
+            ST_IDLE:    stat_r <= start ? ST_CONFIG : ST_IDLE;
+            ST_CONFIG:  stat_r <= ST_WORK;
+            ST_WORK: begin
+                if ((conf_mode[0] && fc_done) || (~conf_mode[0] && conv_done)) begin
+                    stat_r <= ST_IDLE;
+                end
+            end
+            endcase
+        end
+    end
+    
     always @ (posedge clk) begin
         if (rst) begin
             done_r  <= 1'b1;
@@ -238,10 +261,7 @@ module pe_agu#(
         else if (start) begin
             done_r  <= 1'b0;
         end
-        else if ((conf_mode == 2'b00 || conf_mode == 2'b10) && done_conv) begin
-            done_r  <= 1'b1;
-        end
-        else if ((conf_mode == 2'b01 || conf_mode == 2'b11) && done_fc) begin
+        else if ((stat_r == ST_WORK) && ((conf_mode[0] && fc_done) || (~conf_mode[0] && conv_done))) begin
             done_r  <= 1'b1;
         end
     end

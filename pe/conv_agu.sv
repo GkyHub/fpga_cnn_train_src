@@ -112,7 +112,7 @@ module conv_agu#(
             channel_cnt_r <= 0;
         end
         else if (next_channel_r) begin
-            channel_cnt_r <= (channel_cnt_r < conf_trip_cnt) ? channel_cnt_r + 1 : channel_cnt_r;
+            channel_cnt_r <= (channel_cnt_r < conf_idx_cnt) ? channel_cnt_r + 1 : channel_cnt_r;
         end
     end
     
@@ -128,7 +128,7 @@ module conv_agu#(
         else if (start) begin
             working_r <= 1'b1;
         end
-        else if (channel_cnt_r == conf_trip_cnt && next_channel_r) begin
+        else if (channel_cnt_r == conf_idx_cnt && next_channel_r) begin
             working_r <= 1'b0;
         end
     end
@@ -140,7 +140,7 @@ module conv_agu#(
         else if (start_d[2]) begin
             valid_r <= 1'b1;
         end
-        else if (channel_cnt_r == conf_trip_cnt && next_channel_r) begin
+        else if (channel_cnt_r == conf_idx_cnt && next_channel_r) begin
             valid_r <= 1'b0;
         end
     end
@@ -152,7 +152,7 @@ module conv_agu#(
         if (rst) begin
             last_r <= 1'b0;
         end
-        else if (channel_cnt_r == conf_trip_cnt && next_channel_r) begin
+        else if (channel_cnt_r == conf_idx_cnt && next_channel_r) begin
             last_r <= 1'b1;
         end
         else begin
@@ -279,7 +279,7 @@ module conv_agu#(
             pbuf_addr_conv_r <= 0;
         end
         else if (next_pix_d[3] && !next_ch_d[2]) begin
-                pbuf_addr_conv_r <= pbuf_addr_conv_r - 8;
+            pbuf_addr_conv_r <= pbuf_addr_conv_r - 8;
         end
         else begin
             pbuf_addr_conv_r <= pbuf_addr_conv_r + 1;
@@ -324,11 +324,11 @@ module conv_agu#(
 //=============================================================================
     reg     [ADDR_W -1 : 0] abuf_addr_conv_r;
     reg     [ADDR_W -1 : 0] abuf_addr_uconv_r;
-    wire    [ADDR_W -1 : 0] abuf_addr_uconv_d;
     reg     [ADDR_W -1 : 0] abuf_addr_uconv_step_r;
     
     always @ (posedge clk) begin
-        abuf_addr_conv_r <= pbuf_addr_uconv_r;
+        abuf_addr_conv_r[3 : 0] <= pbuf_addr_uconv_r;
+        abuf_addr_conv_r[ADDR_W-1 : 4] <= idx_y;
     end
     
     always @ (posedge clk) begin
@@ -393,6 +393,10 @@ module conv_agu#(
             abuf_acc_new_r  <= 1'b0;
         end
     end
+    
+    assign  abuf_addr   = abuf_addr_r;
+    assign  abuf_acc_en = abuf_acc_en_r;
+    assign  abuf_acc_new= abuf_acc_new_r;
 
 //=============================================================================
 // Clear MAC array signal
