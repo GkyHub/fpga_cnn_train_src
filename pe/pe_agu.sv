@@ -17,7 +17,9 @@ module pe_agu#(
     // instruction port
     input               start,
     output              done,
-    input   [2  -1 : 0] mode,
+    input   [3  -1 : 0] mode,       // {phase[1 : 0], layer[0]}
+                                    // phase: 00: forward, 01: backward, 10: update
+                                    // layer: 0: conv, 1: fc
     input   [8  -1 : 0] idx_cnt,    // number of idx to deal with
     input   [8  -1 : 0] trip_cnt,   // number of cycles for the agu to work with a single cycle
     input               is_new,

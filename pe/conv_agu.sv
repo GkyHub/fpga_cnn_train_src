@@ -176,7 +176,7 @@ module conv_agu#(
         else if (start) begin
             done_r <= 1'b0;
         end
-        else if (~conf_mode[0]) begin
+        else if (~conf_mode[1]) begin
             if (last_d[3]) begin
                 done_r <= 1'b1;
             end

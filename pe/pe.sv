@@ -20,7 +20,7 @@ module pe#(
     
     input               start,
     output              done,
-    input   [2  -1 : 0] mode,
+    input   [3  -1 : 0] mode,
     input   [8  -1 : 0] idx_cnt,  
     input   [8  -1 : 0] trip_cnt, 
     input               is_new,

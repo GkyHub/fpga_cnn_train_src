@@ -3,7 +3,7 @@ module agu_config(
     input   rst,
     
     input               start,
-    input   [2  -1 : 0] mode,
+    input   [3  -1 : 0] mode,
     input   [8  -1 : 0] idx_cnt,    // number of idx to deal with
     input   [8  -1 : 0] trip_cnt,   // number of cycles for the agu to work with a single cycle
     input               is_new,
@@ -49,7 +49,7 @@ module agu_config(
             conf_row_cnt_r  <= 0;
         end
         else if (start) begin
-            conf_mode_r     <= mode;
+            conf_mode_r     <= mode[2 : 1];
             conf_idx_cnt_r  <= idx_cnt;
             conf_trip_cnt_r <= trip_cnt;
             conf_is_new_r   <= is_new;
@@ -79,7 +79,7 @@ module agu_config(
             start_fc_r  <= 1'b0;
         end
         else if (start) begin
-            if (mode == 2'b01 || mode == 2'b11) begin
+            if (mode[0]) begin
                 start_fc_r <= 1'b1;
             end
             else begin
