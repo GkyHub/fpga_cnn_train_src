@@ -1,4 +1,4 @@
-import  GLOBAL_PARAM::DDR_W
+import  GLOBAL_PARAM::DDR_W;
 import  GLOBAL_PARAM::bw;
 
 module ddr2dbuf#(
@@ -33,7 +33,7 @@ module ddr2dbuf#(
     
     always @ (posedge clk) begin
         if (rst) begin
-            mode_r      <= 2'b00;
+            mode_r      <= 3'b000;
             ch_num      <= 0;
             row_num_r   <= 0;
             pix_num_r   <= 0;
@@ -56,6 +56,7 @@ module ddr2dbuf#(
     reg             next_pix_r;
     reg     [ADDR_W -1 : 0] conv_addr;
     wire    [4      -1 : 0] conv_wr_mask;
+    reg             conv_last_r;
     
     always @ (posedge clk) begin
         if (start) begin
@@ -87,6 +88,15 @@ module ddr2dbuf#(
         end
     end
     
+    always @ (posedge clk) begin
+        if (rst) begin
+            conv_last_r <= 1'b0;
+        end
+        else begin
+            conv_last_r <= next_pix_r && (pix_cnt_r == pix_num_r) && (row_cnt_r == row_num_r);
+        end
+    end
+    
     always_comb begin
         conv_addr[ADDR_W-1 : 4] <= ch_cnt_d;
         conv_addr[3]            <= row_cnt_r[1];
@@ -99,6 +109,7 @@ module ddr2dbuf#(
 // FC mode
 //=============================================================================
     reg     [ADDR_W -1 : 0] fc_addr_r;
+    reg                     fc_last_r;
     
     always @ (posedge clk) begin
         if (start) begin
@@ -106,6 +117,15 @@ module ddr2dbuf#(
         end
         else if (ddr_valid) begin
             fc_addr_r <= fc_addr_r + 1;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            fc_last_r <= 1'b0;
+        end
+        else begin
+            fc_last_r <= ddr_valid && (fc_addr_r == ch_num_r);
         end
     end
     
@@ -147,5 +167,34 @@ module ddr2dbuf#(
     assign dbuf_wr_data = dbuf_wr_data_r;
     assign dbuf_wr_addr = dbuf_wr_addr_r;
     assign dbuf_wr_en   = dbuf_wr_en_r;
+    
+//=============================================================================
+// done signal
+//=============================================================================
+
+    reg done_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            done_r <= 1'b1;
+        end
+        else if (start) begin
+            done_r <= 1'b0;
+        end
+        else begin
+            if (mode_r[0]) begin
+                if (fc_last_r) begin
+                    done_r <= 1'b1;
+                end
+            end
+            else begin
+                if (conv_last_r) begin
+                    done_r <= 1'b1;
+                end
+            end
+        end
+    end
+    
+    assign  done = done_r;
     
 endmodule
