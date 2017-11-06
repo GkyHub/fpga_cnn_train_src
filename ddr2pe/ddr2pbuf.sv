@@ -1,6 +1,8 @@
 import  GLOBAL_PARAM::DDR_W;
 import  GLOBAL_PARAM::BATCH;
 import  GLOBAL_PARAM::bw;
+import  GLOBAL_PARAM::RES_W;
+import  GLOBAL_PARAM::DATA_W;
 
 module ddr2pbuf#(
     parameter   BUF_DEPTH   = 256,
@@ -12,6 +14,7 @@ module ddr2pbuf#(
     // configuration port
     input           start,
     output          done,
+    input   [1 : 0] conf_grp_sel,   // only for forward and backward
     input   [7 : 0] conf_trans_num,
     input   [2 : 0] conf_mode,
     input   [3 : 0] conf_ch_num,    // only for update
@@ -22,12 +25,14 @@ module ddr2pbuf#(
     // ddr data stream port
     input   [DDR_W  -1 : 0] ddr1_data,
     input                   ddr1_valid,
+    output                  ddr1_ready,
     
     input   [DDR_W  -1 : 0] ddr2_data,
     input                   ddr2_valid,
+    output                  ddr2_ready,
     
     // pbuf write port
-    output  [3 : 0][ADDR_W         -1 : 0] pbuf_wr_addr,
+    output         [ADDR_W         -1 : 0] pbuf_wr_addr,
     output  [3 : 0][DATA_W * BATCH -1 : 0] pbuf_wr_data,
     output  [3 : 0]                        pbuf_wr_en,
     
@@ -83,9 +88,9 @@ module ddr2pbuf#(
     reg     [3 : 0] ch_cnt_r;
     reg     [3 : 0] ch_cnt_d;
     reg             next_pix_r;
-    reg     [ADDR_W -1 : 0] conv_addr;
-    wire    [4      -1 : 0] conv_wr_mask;
-    reg             conv_last_r;
+    reg     [ADDR_W -1 : 0] update_addr;
+    wire    [4      -1 : 0] update_wr_mask;
+    reg             update_last_r;
     
     always @ (posedge clk) begin
         if (start) begin
@@ -97,7 +102,7 @@ module ddr2pbuf#(
     end
     
     always @ (posedge clk) begin
-        next_pix_r  <= (ch_cnt_r == ch_num_r) && ddr1_valid && ddr2_valid;
+        next_pix_r  <= (ch_cnt_r == ch_num_r) && (ddr1_valid && ddr2_valid);
         ch_cnt_d    <= ch_cnt_r;
     end
     
@@ -119,19 +124,112 @@ module ddr2pbuf#(
     
     always @ (posedge clk) begin
         if (rst) begin
-            conv_last_r <= 1'b0;
+            update_last_r <= 1'b0;
         end
         else begin
-            conv_last_r <= next_pix_r && (pix_cnt_r == pix_num_r) && (row_cnt_r == row_num_r);
+            update_last_r <= next_pix_r && (pix_cnt_r == pix_num_r) && (row_cnt_r == row_num_r);
         end
     end
     
     always_comb begin
-        conv_addr[ADDR_W-1 : 4] <= ch_cnt_d;
-        conv_addr[3]            <= row_cnt_r[1];
-        conv_addr[2 : 0]        <= pix_cnt_r[3 : 1]; 
+        update_addr[ADDR_W-1 : 4] <= ch_cnt_d;
+        update_addr[3]            <= row_cnt_r[1];
+        update_addr[2 : 0]        <= pix_cnt_r[3 : 1]; 
     end
     
-    assign conv_wr_mask = 1 << {row_cnt_r[0], pix_cnt_r[0]};
+//=============================================================================
+// data and address selection
+//=============================================================================
+
+    reg     [BATCH  -1 : 0][DATA_W  -1 : 0] ddr1_data_d;
+    reg     [BATCH  -1 : 0][DATA_W  -1 : 0] ddr2_data_d;
+    reg                     ddr_valid_d;
+    
+    reg     [ADDR_W-1 : 0] pbuf_wr_addr_r;
+    reg     [3 : 0][BATCH -1 : 0][DATA_W-1 : 0] pbuf_wr_data_r;
+    reg     [3 : 0]                        pbuf_wr_en_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            ddr_valid_d <= 1'b0;
+        end
+        else begin
+            ddr_valid_d <= (conf_mode[2:1] == 2'b10) ? (ddr1_valid && ddr2_valid) : ddr2_valid;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        ddr1_data_d <= ddr1_data;
+        ddr2_data_d <= ddr2_data;
+    end
+
+    always @ (posedge clk) begin
+        if (mode[2:1] == 2'b10) begin
+            pbuf_wr_addr_r <= update_addr;
+        end
+        else begin
+            pbuf_wr_addr_r <= param_addr;
+        end
+    end
+    
+    genvar i, j;
+    generate
+        for (j = 0; j < 4; j = j + 1) begin: UNIT
+            for (i = 0; i < BATCH; i = i + 1) begin: ARRAY
+                always @ (posedge clk) begin
+                    if (mode[2:1] == 2'b10) begin
+                        if (conf_depool) begin
+                            pbuf_wr_data_r[j][i] <= ddr2_data_d[i][j] ? ddr1_data_d[j][i] : '0;
+                        end
+                        else begin
+                            pbuf_wr_data_r[j][i] <= ddr2_data_d[i][j];
+                        end
+                    end
+                    else begin
+                        pbuf_wr_data_r[j][i] <= ddr1_data[DATA_W*i +: DATA_W];
+                    end
+                end
+            end
+            
+            always @ (posedge clk) begin
+                if (rst) begin
+                    pbuf_wr_en_r[j] <= 1'b0;
+                end
+                else if (mode[2:1] == 2'b10) begin
+                    if (conf_depool) begin
+                        pbuf_wr_en_r <= ddr_valid_d;
+                    end
+                    else begin
+                        pbuf_wr_en_r <= ddr_valid_d && {row_cnt_r[0], pix_cnt_r[0]} == j;
+                    end
+                end
+                else begin
+                    pbuf_wr_en_r <= (conf_grp_sel << j) && ddr2_valid;
+                end
+            end
+            
+        end
+    endgenerate
+    
+    assign  pbuf_wr_addr    = pbuf_wr_addr_r;
+    assign  pbuf_wr_data    = pbuf_wr_data_r;
+    assign  pbuf_wr_en      = pbuf_wr_en_r;
+
+//=============================================================================
+// update bias
+//=============================================================================
+    wire    [RES_W  -1 : 0] channel_sum;
+
+    adder_tree#(
+        .DATA_W (DATA_W ),
+        .DATA_N (BATCH  ),
+        .RES_W  (RES_W  )
+    ) bias_gradient_sum (
+        .clk    (clk        ),
+    
+        .vec    (ddr1_data  ),
+        .sum    (channel_sum)
+    );
+    
     
 endmodule
