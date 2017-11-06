@@ -44,7 +44,9 @@ module pe_array#(
     
     input   [3 : 0][bw(BUF_DEPTH)  -1 : 0] abuf_wr_addr,
     input   [3 : 0][BATCH * RES_W  -1 : 0] abuf_wr_data,
-    input   [3 : 0]                        abuf_wr_en,    
+    input   [3 : 0]                        abuf_wr_data_en,
+    input   [3 : 0][BATCH * RES_W  -1 : 0] abuf_wr_tail,
+    input   [3 : 0]                        abuf_wr_tail_en,     
     input          [bw(BUF_DEPTH)  -1 : 0] abuf_rd_addr,
     output  [3 : 0][BATCH * RES_W  -1 : 0] abuf_rd_data
     );
@@ -111,7 +113,9 @@ module pe_array#(
                 
                     .abuf_wr_addr   (abuf_wr_addr[j]            ),
                     .abuf_wr_data   (abuf_wr_data[j]            ),
-                    .abuf_wr_en     (abuf_wr_en[j] && wr_sel[i] ),    
+                    .abuf_wr_data_en(abuf_wr_data_en[j] && wr_sel[i]),
+                    .abuf_wr_tail   (abuf_wr_tail[j]            ),
+                    .abuf_wr_tail_en(abuf_wr_tail_en[j] && wr_sel[i]),
                     .abuf_rd_addr   (abuf_rd_addr               ),
                     .abuf_rd_data   (grp_abuf_rd_data[i][j]     )
                 );

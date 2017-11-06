@@ -9,6 +9,8 @@ package GLOBAL_PARAM;
     localparam  RES_W   = 32;   // intermediate result bitwidth
                                 // gradient buffer bitwidth
                                 
+    localparam  TAIL_W  = RES_W - DATA_W;
+                                
     localparam  IDX_W   = 4;    // sparse unit index bitwidth
     
     localparam  BATCH   = 32;   // hardware batch size

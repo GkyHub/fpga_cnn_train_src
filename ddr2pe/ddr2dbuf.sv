@@ -68,7 +68,7 @@ module ddr2dbuf#(
     end
     
     always @ (posedge clk) begin
-        next_pix_r  <= (ch_cnt_r == ch_num_r);
+        next_pix_r  <= (ch_cnt_r == ch_num_r) && ddr_valid;
         ch_cnt_d    <= ch_cnt_r;
     end
     

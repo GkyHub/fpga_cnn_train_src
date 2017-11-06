@@ -1,6 +1,8 @@
 import  GLOBAL_PARAM::DATA_W;
 import  GLOBAL_PARAM::BATCH;
 import  GLOBAL_PARAM::RES_W;
+import  GLOBAL_PARAM::DATA_W;
+import  GLOBAL_PARAM::TAIL_W;
 import  GLOBAL_PARAM::IDX_W;
 import  GLOBAL_PARAM::bw;
 
@@ -42,9 +44,11 @@ module pe#(
     input   [DATA_W * BATCH -1 : 0] pbuf_wr_data,
     input                           pbuf_wr_en,
     
-    input   [bw(BUF_DEPTH)  -1 : 0] abuf_wr_addr,
-    input   [BATCH * RES_W  -1 : 0] abuf_wr_data,
-    input                           abuf_wr_en,    
+    input   [ADDR_W         -1 : 0] abuf_wr_addr,
+    input   [BATCH * DATA_W -1 : 0] abuf_wr_data,
+    input                           abuf_wr_data_en,
+    input   [BATCH * TAIL_W -1 : 0] abuf_wr_tail,
+    input                           abuf_wr_tail_en,    
     input   [bw(BUF_DEPTH)  -1 : 0] abuf_rd_addr,
     output  [BATCH * RES_W  -1 : 0] abuf_rd_data
     );
@@ -241,7 +245,9 @@ module pe#(
     );
     
     accum_buf#(
-        .DEPTH  (BUF_DEPTH  )
+        .DEPTH      (BUF_DEPTH  ),
+        .BATCH      (BATCH      ),
+        .RAM_TYPE   (RAM_TYPE   )
     ) acc_buffer (
         .clk    (clk            ),
         .rst    (rst            ),
@@ -255,11 +261,12 @@ module pe#(
     
         .wr_addr    (abuf_wr_addr   ),
         .wr_data    (abuf_wr_data   ),
-        .wr_en      (abuf_wr_en     ),
+        .wr_data_en (abuf_wr_data_en),
+        .wr_tail    (abuf_wr_tail   ),
+        .wr_tail_en (abuf_wr_tail_en),
     
         .rd_addr    (abuf_rd_addr   ),
         .rd_data    (abuf_rd_data   )
     );
-    
-    
+        
 endmodule
