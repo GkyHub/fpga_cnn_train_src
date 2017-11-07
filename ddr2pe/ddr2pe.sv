@@ -30,7 +30,12 @@ module ddr2pe#(
     
     output  [3 : 0][bw(BUF_DEPTH)  -1 : 0] pbuf_wr_addr,
     output  [3 : 0][DATA_W * BATCH -1 : 0] pbuf_wr_data,
-    output  [3 : 0]                        pbuf_wr_en
+    output  [3 : 0]                        pbuf_wr_en,
+    
+    input                   bbuf_accum_en,
+    input                   bbuf_accum_new,
+    input   [ADDR_W -1 : 0] bbuf_accum_addr,
+    input   [RES_W  -1 : 0] bbuf_accum_data,
     );
     
     ddr2ibuf#(
@@ -72,6 +77,40 @@ module ddr2pe#(
         .dbuf_wr_addr   (dbuf_wr_addr   ),
         .dbuf_wr_data   (dbuf_wr_data   ),
         .dbuf_wr_en     (dbuf_wr_en     )
+    );
+    
+    ddr2pbuf#(
+        .BUF_DEPTH  (BUF_DEPTH  ),
+    ) ddr2pe_inst (
+        .clk    (clk    ),
+        .rst    (rst    ),
+    
+        .start          (),
+        .done           (),
+        .conf_grp_sel   (),
+        .conf_trans_num (),
+        .conf_mode      (),
+        .conf_ch_num    (),
+        .conf_pix_num   (),
+        .conf_row_num   (),
+        .conf_depool    (),
+    
+        .ddr1_data      (ddr1_data      ),
+        .ddr1_valid     (ddr1_valid     ),
+        .ddr1_ready     (ddr1_ready     ),
+    
+        .ddr2_data      (ddr2_data      ),
+        .ddr2_valid     (ddr2_valid     ),
+        .ddr2_ready     (ddr2_ready     ),
+    
+        .pbuf_wr_addr   (pbuf_wr_addr   ),
+        .pbuf_wr_data   (pbuf_wr_data   ),
+        .pbuf_wr_en     (pbuf_wr_en     ),
+
+        .bbuf_accum_en  (bbuf_accum_en  ),
+        .bbuf_accum_new (bbuf_accum_new ),
+        .bbuf_accum_addr(bbuf_accum_addr),
+        .bbuf_accum_data(bbuf_accum_data),
     );
     
 endmodule

@@ -16,7 +16,7 @@ module ddr2pbuf#(
     output          done,
     input   [1 : 0] conf_grp_sel,   // only for forward and backward
     input   [7 : 0] conf_trans_num,
-    input   [2 : 0] conf_mode,
+    input   [2 : 0] conf_mode,                                     
     input   [3 : 0] conf_ch_num,    // only for update
     input   [3 : 0] conf_pix_num,   // only for update
     input   [1 : 0] conf_row_num,   // only for update
@@ -219,7 +219,10 @@ module ddr2pbuf#(
 // update bias
 //=============================================================================
     wire    [RES_W  -1 : 0] channel_sum;
-
+    wire    bbuf_accum_valid = (conf_mode[2:1] == 2'b10) && (ddr1_valid && ddr2_valid);
+    
+    assign  bbuf_accum_new = 1'b0;
+    
     adder_tree#(
         .DATA_W (DATA_W ),
         .DATA_N (BATCH  ),
@@ -231,5 +234,6 @@ module ddr2pbuf#(
         .sum    (channel_sum)
     );
     
+    RQ#(.DW(1), .L(6)) acc_en_q (.clk, .rst, .s(bbuf_accum_valid), .d(bbuf_accum_en));
     
 endmodule
