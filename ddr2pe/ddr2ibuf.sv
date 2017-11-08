@@ -11,8 +11,8 @@ module ddr2ibuf#(
     // configuration port
     input           start,
     output          done,
-    input   [2 : 0] mode,
-    input   [7 : 0] idx_num,
+    input   [2 : 0] conf_mode,
+    input   [7 : 0] conf_idx_num,
     
     // ddr data stream port
     input   [DDR_W  -1 : 0] ddr_data,
@@ -26,20 +26,6 @@ module ddr2ibuf#(
     );
     
     localparam IDX_BATCH = DDR_W / IDX_W / 2;
-    
-    reg     [8  -1 : 0] idx_num_r;
-    reg     [3  -1 : 0] mode_r;
-    
-    always @ (posedge clk) begin
-        if (rst) begin
-            idx_num_r <= 0;
-            mode_r    <= 3'b000;
-        end
-        else if (start) begin
-            idx_num_r <= idx_num;
-            mode_r    <= mode;
-        end
-    end
     
     reg     [ADDR_W -1 : 0] idx_wr_addr_r;
     reg     [ADDR_W -1 : 0] idx_cnt_r;
@@ -73,7 +59,7 @@ module ddr2ibuf#(
             ddr_ready_r <= 1'b0;
         end
         else begin
-            ddr_ready_r <= (batch_cnt_r == IDX_BATCH - 2) || (idx_cnt_r == idx_num_r);
+            ddr_ready_r <= (batch_cnt_r == IDX_BATCH - 2) || (idx_cnt_r == conf_idx_num);
         end
     end
     
@@ -95,7 +81,7 @@ module ddr2ibuf#(
             idx_wr_en_r <= 1'b0;
         end
         else begin
-            idx_wr_en_r <= ddr_valid && (idx_cnt_r <= idx_num_r);
+            idx_wr_en_r <= ddr_valid && (idx_cnt_r <= conf_idx_num);
         end
     end
     

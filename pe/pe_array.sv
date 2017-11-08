@@ -7,7 +7,8 @@ import  GLOBAL_PARAM::bw;
 module pe_array#(
     parameter   PE_NUM      = 32,
     parameter   BUF_DEPTH   = 256,
-    parameter   IDX_DEPTH   = 256
+    parameter   IDX_DEPTH   = 256,
+    parameter   ADDR_W      = bw(BUF_DEPTH)
     )(
     input   clk,
     input   rst,
@@ -17,6 +18,7 @@ module pe_array#(
     input   [PE_NUM -1 : 0] switch_p,   // switch the ping pong buffer param
     input   [PE_NUM -1 : 0] switch_i,   // switch the ping pong buffer idx
     input   [PE_NUM -1 : 0] switch_a,   // switch the ping pong buffer accum
+    input                   switch_b,
     
     input   [PE_NUM -1 : 0] start,
     output  [PE_NUM -1 : 0] done,
@@ -34,21 +36,34 @@ module pe_array#(
     input   [bw(IDX_DEPTH)  -1 : 0] idx_wr_addr,
     input   [4              -1 : 0] idx_wr_en,
     
-    input          [bw(BUF_DEPTH)  -1 : 0] dbuf_wr_addr,
+    input          [ADDR_W         -1 : 0] dbuf_wr_addr,
     input   [3 : 0][DATA_W * BATCH -1 : 0] dbuf_wr_data,
     input   [3 : 0]                        dbuf_wr_en,
     
-    input   [3 : 0][bw(BUF_DEPTH)  -1 : 0] pbuf_wr_addr,
+    input   [3 : 0][ADDR_W         -1 : 0] pbuf_wr_addr,
     input   [3 : 0][DATA_W * BATCH -1 : 0] pbuf_wr_data,
     input   [3 : 0]                        pbuf_wr_en,
     
-    input   [3 : 0][bw(BUF_DEPTH)  -1 : 0] abuf_wr_addr,
-    input   [3 : 0][BATCH * RES_W  -1 : 0] abuf_wr_data,
+    input   [3 : 0][ADDR_W         -1 : 0] abuf_wr_addr,
+    input   [3 : 0][BATCH * DATA_W -1 : 0] abuf_wr_data,
     input   [3 : 0]                        abuf_wr_data_en,
-    input   [3 : 0][BATCH * RES_W  -1 : 0] abuf_wr_tail,
+    input   [3 : 0][BATCH * TAIL_W -1 : 0] abuf_wr_tail,
     input   [3 : 0]                        abuf_wr_tail_en,     
-    input          [bw(BUF_DEPTH)  -1 : 0] abuf_rd_addr,
-    output  [3 : 0][BATCH * RES_W  -1 : 0] abuf_rd_data
+    input          [ADDR_W         -1 : 0] abuf_rd_addr,
+    output  [3 : 0][BATCH * RES_W  -1 : 0] abuf_rd_data,
+    
+    input                   bbuf_acc_en,
+    input                   bbuf_acc_new,
+    input   [ADDR_W -1 : 0] bbuf_acc_addr,
+    input   [RES_W  -1 : 0] bbuf_acc_data,
+    
+    input   [ADDR_W -1 : 0] bbuf_wr_addr,
+    input   [DATA_W -1 : 0] bbuf_wr_data,
+    input                   bbuf_wr_data_en,
+    input   [TAIL_W -1 : 0] bbuf_wr_tail,
+    input                   bbuf_wr_tail_en,     
+    input   [ADDR_W -1 : 0] bbuf_rd_addr,
+    output  [RES_W  -1 : 0] bbuf_rd_data
     );
     
     localparam GRP_NUM = PE_NUM / 4;
@@ -123,6 +138,29 @@ module pe_array#(
         end
     endgenerate
 
+    accum_buf#(
+        .DEPTH      (BUF_DEPTH      ),
+        .BATCH      (1              ),
+        .RAM_TYPE   ("distributed"  )
+    ) bias_buf (
+        .clk        (clk            ),
+        .rst        (rst            ),
+        
+        .switch     (switch_b       ),
     
+        .accum_en   (bbuf_acc_en    ),
+        .accum_new  (bbuf_acc_new   ),
+        .accum_addr (bbuf_acc_addr  ),
+        .accum_data (bbuf_acc_data  ),
+    
+        .wr_addr    (bbuf_wr_addr   ),
+        .wr_data    (bbuf_wr_data   ),
+        .wr_data_en (bbuf_wr_data_en),
+        .wr_tail    (bbuf_wr_tail   ),
+        .wr_tail_en (bbuf_wr_tail_en),
+
+        .rd_addr    (bbuf_rd_addr   ),
+        .rd_data    (bbuf_rd_data   )
+    );
     
 endmodule

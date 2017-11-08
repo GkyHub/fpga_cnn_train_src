@@ -41,21 +41,21 @@ module ddr2pe#(
     ddr2ibuf#(
         .IDX_DEPTH  (IDX_DEPTH  )
     ) ddr2ibuf_inst (
-        .clk        (clk        ),
-        .rst        (rst        ),
+        .clk            (clk        ),
+        .rst            (rst        ),
     
-        .start      (),
-        .done       (),
-        .mode       (),
-        .idx_num    (),
+        .start          (),
+        .done           (),
+        .conf_mode      (),
+        .conf_idx_num   (),
     
-        .ddr_data   (ddr2_data  ),
-        .ddr_valid  (ddr2_valid ),
-        .ddr_ready  (),
+        .ddr_data       (ddr2_data  ),
+        .ddr_valid      (ddr2_valid ),
+        .ddr_ready      (),
     
-        .idx_wr_data(idx_wr_data),
-        .idx_wr_addr(idx_wr_addr),
-        .idx_wr_en  (idx_wr_en  )
+        .idx_wr_data    (idx_wr_data),
+        .idx_wr_addr    (idx_wr_addr),
+        .idx_wr_en      (idx_wr_en  )
     );
     
     ddr2dbuf#(
@@ -66,10 +66,10 @@ module ddr2pe#(
 
         .start          (),
         .done           (),
-        .mode           (),
-        .ch_num         (),
-        .row_num        (),
-        .pix_num        (),
+        .conf_mode      (),
+        .conf_ch_num    (),
+        .conf_row_num   (),
+        .conf_pix_num   (),
     
         .ddr_data       (ddr1_data      ),
         .ddr_valid      (ddr1_valid     ),
