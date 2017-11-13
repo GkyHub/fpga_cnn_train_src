@@ -3,16 +3,18 @@ import  GLOBAL_PARAM::bw;
 
 module ddr2ibuf#(
     parameter   IDX_DEPTH   = 256,
-    parameter   ADDR_W      = bw(IDX_DEPTH)
+    parameter   ADDR_W      = bw(IDX_DEPTH),
+    parameter   PE_NUM      = 32
     )(
     input   clk,
     input   rst,
     
     // configuration port
-    input           start,
-    output          done,
-    input   [2 : 0] conf_mode,
-    input   [7 : 0] conf_idx_num,
+    input                   start,
+    output                  done,
+    input   [4      -1 : 0] conf_mode,
+    input   [8      -1 : 0] conf_idx_num,
+    input   [PE_NUM -1 : 0] conf_mask,
     
     // ddr data stream port
     input   [DDR_W  -1 : 0] ddr_data,
@@ -22,7 +24,7 @@ module ddr2ibuf#(
     // pbuf write port
     output  [IDX_W*2-1 : 0] idx_wr_data,
     output  [ADDR_W -1 : 0] idx_wr_addr,
-    output  [4      -1 : 0] idx_wr_en
+    output  [PE_NUM -1 : 0] idx_wr_en
     );
     
     localparam IDX_BATCH = DDR_W / IDX_W / 2;
@@ -33,7 +35,7 @@ module ddr2ibuf#(
     wire    [IDX_BATCH-1 : 0][IDX_W*2-1 : 0] ddr_data_arr;
     reg     ddr_ready_r;
     reg     [IDX_W*2-1 : 0] idx_wr_data_r;
-    reg     idx_wr_en_r;
+    reg     [PE_NUM -1 : 0] idx_wr_en_r;
     
     always @ (posedge clk) begin
         if (start) begin
@@ -67,7 +69,12 @@ module ddr2ibuf#(
     assign  ddr_data_arr = ddr_data;
     
     always @ (posedge clk) begin
-        idx_wr_data = ddr_data_arr[batch_cnt_r];
+        if (conf_mode[2:1] != 2'b01) begin
+            idx_wr_data = ddr_data_arr[batch_cnt_r];
+        else begin
+            idx_wr_data = {ddr_data_arr[batch_cnt_r][IDX_W  -1 :     0], 
+                           ddr_data_arr[batch_cnt_r][IDX_W*2-1 : IDX_W]};
+        end
     end
     
     // address
@@ -78,11 +85,18 @@ module ddr2ibuf#(
     // write enable
     always @ (posedge clk) begin
         if (rst) begin
-            idx_wr_en_r <= 1'b0;
+            idx_wr_en_r <= '0;
+        end
+        else if (ddr_valid) begin
+            idx_wr_en_r <= conf_mask;
         end
         else begin
-            idx_wr_en_r <= ddr_valid && (idx_cnt_r <= conf_idx_num);
+            idx_wr_en_r <= '0;
         end
     end
+    
+    assign  idx_wr_en   <= idx_wr_en_r;
+    assign  idx_wr_data <= idx_wr_data_r;
+    assign  idx_wr_addr <= idx_wr_addr_r;
     
 endmodule

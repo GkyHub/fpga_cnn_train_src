@@ -6,21 +6,22 @@ import  GLOBAL_PARAM::DATA_W;
 
 module ddr2pbuf#(
     parameter   BUF_DEPTH   = 256,
-    parameter   ADDR_W      = bw(BUF_DEPTH)
+    parameter   ADDR_W      = bw(BUF_DEPTH),
+    parameter   PE_NUM      = 32
     )(
     input   clk,
     input   rst,
     
     // configuration port
-    input           start,
-    output          done,
-    input   [1 : 0] conf_grp_sel,   // only for forward and backward
-    input   [7 : 0] conf_trans_num,
-    input   [2 : 0] conf_mode,                                     
-    input   [3 : 0] conf_ch_num,    // only for update
-    input   [3 : 0] conf_pix_num,   // only for update
-    input   [1 : 0] conf_row_num,   // only for update
-    input           conf_depool,    // only for update
+    input                   start,
+    output                  done,
+    input   [8      -1 : 0] conf_trans_num,
+    input   [4      -1 : 0] conf_mode,
+    input   [4      -1 : 0] conf_ch_num,    // only for update
+    input   [4      -1 : 0] conf_pix_num,   // only for update
+    input   [2      -1 : 0] conf_row_num,   // only for update
+    input                   conf_depool,    // only for update
+    input   [PE_NUM -1 : 0] conf_mask
     
     // ddr data stream port
     input   [DDR_W  -1 : 0] ddr1_data,
@@ -32,15 +33,16 @@ module ddr2pbuf#(
     output                  ddr2_ready,
     
     // pbuf write port
-    output         [ADDR_W         -1 : 0] pbuf_wr_addr,
-    output  [3 : 0][DATA_W * BATCH -1 : 0] pbuf_wr_data,
-    output  [3 : 0]                        pbuf_wr_en,
+    
+    output  [3:0][DATA_W*BATCH-1:0] pbuf_wr_data,
+    output  [ADDR_W -1 : 0] pbuf_wr_addr,
+    output  [PE_NUM -1 : 0] pbuf_wr_en,
     
     // bbuf accumulation port
     input                   bbuf_accum_en,
     input                   bbuf_accum_new,
     input   [ADDR_W -1 : 0] bbuf_accum_addr,
-    input   [RES_W  -1 : 0] bbuf_accum_data,
+    input   [RES_W  -1 : 0] bbuf_accum_data
     );
 
 //=============================================================================
@@ -145,9 +147,9 @@ module ddr2pbuf#(
     reg     [BATCH  -1 : 0][DATA_W  -1 : 0] ddr2_data_d;
     reg                     ddr_valid_d;
     
-    reg     [ADDR_W-1 : 0] pbuf_wr_addr_r;
-    reg     [3 : 0][BATCH -1 : 0][DATA_W-1 : 0] pbuf_wr_data_r;
-    reg     [3 : 0]                        pbuf_wr_en_r;
+    reg     [ADDR_W -1 : 0] pbuf_wr_addr_r;
+    reg     [PE_NUM -1 : 0] pbuf_wr_en_r;
+    reg     [3 : 0][BATCH -1 : 0][DATA_W-1 : 0] pbuf_wr_data_r;    
     
     always @ (posedge clk) begin
         if (rst) begin
@@ -176,6 +178,7 @@ module ddr2pbuf#(
     generate
         for (j = 0; j < 4; j = j + 1) begin: UNIT
             for (i = 0; i < BATCH; i = i + 1) begin: ARRAY
+            
                 always @ (posedge clk) begin
                     if (mode[2:1] == 2'b10) begin
                         if (conf_depool) begin
@@ -189,25 +192,36 @@ module ddr2pbuf#(
                         pbuf_wr_data_r[j][i] <= ddr1_data[DATA_W*i +: DATA_W];
                     end
                 end
-            end
+                
+            end            
+        end
+        
+        for (i = 0; i < PE_NUM / 4; i = i + 1) begin: GROUP
+            for (j = 0; j < 4; j = j + 1) begin: UNIT
             
-            always @ (posedge clk) begin
-                if (rst) begin
-                    pbuf_wr_en_r[j] <= 1'b0;
-                end
-                else if (mode[2:1] == 2'b10) begin
-                    if (conf_depool) begin
-                        pbuf_wr_en_r <= ddr_valid_d;
+                always @ (posedge clk) begin
+                    if (rst) begin
+                        pbuf_wr_en_r[i*4+j] <= 1'b0;
+                    end
+                    else if (conf_mask[i*4+j]) begin
+                        else if (conf_mode[2:1] == 2'b10) begin
+                            if (conf_depool) begin
+                                pbuf_wr_en_r[i*4+j] <= ddr_valid_d;
+                            end
+                            else begin
+                                pbuf_wr_en_r[i*4+j] <= ddr_valid_d && ({row_cnt_r[0], pix_cnt_r[0]} == j);
+                            end
+                        end
+                        else begin
+                            pbuf_wr_en_r[i*4+j] <= ddr2_valid;
+                        end
                     end
                     else begin
-                        pbuf_wr_en_r <= ddr_valid_d && {row_cnt_r[0], pix_cnt_r[0]} == j;
+                        pbuf_wr_en_r[i*4+j] <= 1'b0;
                     end
                 end
-                else begin
-                    pbuf_wr_en_r <= (conf_grp_sel << j) && ddr2_valid;
-                end
+                
             end
-            
         end
     endgenerate
     

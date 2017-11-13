@@ -15,6 +15,12 @@ package GLOBAL_PARAM;
     
     localparam  BATCH   = 32;   // hardware batch size
     
+    localparam  DDR_W   = 256;
+    
+    localparam  DDR_ADDR_W  = 32;
+    
+    localparam  BURST_W     = 16;
+    
     // calculate the bitwidth for representing number less than depth
     function integer bw;
         input integer depth;

@@ -4,16 +4,18 @@ import  GLOBAL_PARAM::TAIL_W;
 import  GLOBAL_PARAM::bw;
 
 module ddr2abuf#(
-    parameter   BUF_DEPTH,
+    parameter   BUF_DEPTH   = 256,
+    parameter   PE_NUM      = 32,
     parameter   ADDR_W  = bw(BUF_DEPTH)
     )(
     input   clk,
     input   rst,
     
-    input           start,
-    output          done,
-    input   [1 : 0] conf_trans_type,
-    input   [7 : 0] conf_trans_num,
+    input                   start,
+    output                  done,
+    input   [2      -1 : 0] conf_trans_type,
+    input   [8      -1 : 0] conf_trans_num,
+    input   [PE_NUM -1 : 0] conf_mask,
     
     // ddr data stream port
     input   [DDR_W  -1 : 0] ddr_data,
@@ -21,35 +23,224 @@ module ddr2abuf#(
     output                  ddr_ready,
     
     // accum and bias buf port
-    input   [3 : 0][ADDR_W         -1 : 0] abuf_wr_addr,
-    input   [3 : 0][BATCH * DATA_W -1 : 0] abuf_wr_data,
-    input   [3 : 0]                        abuf_wr_data_en,
-    input   [3 : 0][BATCH * TAIL_W -1 : 0] abuf_wr_tail,
-    input   [3 : 0]                        abuf_wr_tail_en,
+    output  [ADDR_W         -1 : 0] abuf_wr_addr,
+    output  [BATCH * DATA_W -1 : 0] abuf_wr_data,
+    output  [PE_NUM         -1 : 0] abuf_wr_data_en,
+    output  [BATCH * TAIL_W -1 : 0] abuf_wr_tail,
+    output  [PE_NUM         -1 : 0] abuf_wr_tail_en,
     
-    input   [ADDR_W -1 : 0] bbuf_wr_addr,
-    input   [DATA_W -1 : 0] bbuf_wr_data,
-    input                   bbuf_wr_data_en,
-    input   [TAIL_W -1 : 0] bbuf_wr_tail,
-    input                   bbuf_wr_tail_en,
+    output  [ADDR_W -1 : 0] bbuf_wr_addr,
+    output  [DATA_W -1 : 0] bbuf_wr_data,
+    output                  bbuf_wr_data_en,
+    output  [TAIL_W -1 : 0] bbuf_wr_tail,
+    output                  bbuf_wr_tail_en
     );
     
     localparam TD_RATE = TAIL_W / DATA_W;
-    
-    reg     [ADDR_W -1 : 0] abuf_addr_r;
+
+//=============================================================================
+// Load tail data to accumulation buffer
+//=============================================================================
+    reg     [ADDR_W -1 : 0] abuf_tail_addr_r;
     reg     [3      -1 : 0] abuf_pack_cnt_r;
+    reg                     abuf_next_pack_r;
     
-    wire    [TD_RATE-1:0][BATCH-1:0][DATA_W-1:0] abuf_tail_buf;
+    wire    [TD_RATE-1:0][BATCH-1:0][DATA_W-1:0] abuf_tail_buf_r;
     
     always @ (posedge clk) begin
-        if (start && ~conf_mode[0]) begin
+        if (start) begin
             abuf_addr_r     <= 0;
             abuf_pack_cnt_r <= 0; 
         end
         else if (ddr_valid) begin
-            abuf_addr_r     <= abuf_addr_r + 1;
-            abuf_pack_cnt_r <= (abuf_pack_cnt_r == TD_RATE - 1) ? 
+            abuf_tail_addr_r<= (abuf_pack_cnt_r == TD_RATE - 1) ? abuf_tail_addr_r + 1 : abuf_tail_addr_r;
+            abuf_pack_cnt_r <= (abuf_pack_cnt_r == TD_RATE - 1) ? 0 : abuf_pack_cnt_r + 1;
         end
     end
+    
+    always @ (posedge clk) begin
+        abuf_next_pack_r <= ddr_valid && (abuf_pack_cnt_r == TD_RATE - 1);
+    end
+    
+    always @ (posedge clk) begin
+        if (start) begin
+            abuf_tail_addr_r <= 0;
+        end
+        else if (abuf_next_pack_r) begin
+            abuf_tail_addr_r <= abuf_tail_addr_r + 1;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (ddr_valid && conf_trans_type == 2'b01) begin
+            abuf_tail_buf_r[abuf_pack_cnt_r] <= ddr_data;
+        end
+    end
+    
+//=============================================================================
+// Load data to accumulation buffer
+//=============================================================================
+    reg     [ADDR_W -1 : 0] abuf_data_addr_r;
+    reg     [DDR_W  -1 : 0] abuf_data_buf_r;
+    
+    always @ (posedge clk) begin
+        if (start) begin
+            abuf_data_addr_r <= 0;
+        end
+        else if (ddr_valid) begin
+            abuf_data_addr_r <= abuf_data_addr_r + 1;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        abuf_data_buf_r <= ddr_data;
+    end
+    
+//=============================================================================
+// Load tail to bias buffer
+//=============================================================================
+
+    localparam  TPACK_SIZE = DDR_W / TAIL_W;
+    
+    reg     [6  -1 : 0] bbuf_tail_cnt_r;
+    reg     [ADDR_W -1 : 0] bbuf_tail_addr_r;
+    wire    [TPACK_SIZE -1 : 0][TAIL_W -1 : 0] bbuf_tail_pack;
+    reg     [TAIL_W -1 : 0] bbuf_tail_r;
+    
+    assign  bbuf_data_pack = ddr_data[TPACK_SIZE*DATA_W-1 : 0];
+    
+    always @ (posedge clk) begin
+        if (start) begin
+            bbuf_tail_cnt_r <= 0;
+        end
+        else if (ddr_valid) begin
+            bbuf_tail_cnt_r <= (bbuf_tail_cnt_r == TPACK_SIZE - 1) ? 0 : bbuf_tail_cnt_r + 1;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        bbuf_tail_r <= bbuf_tail_pack[bbuf_data_cnt_r];
+    end
+    
+    always @ (posedge clk) begin
+        if (start) begin
+            bbuf_tail_addr_r <= 0;
+        end
+        else if (ddr_valid) begin
+            bbuf_tail_addr_r <= bbuf_tail_addr_r + 1;
+        end
+    end
+    
+//=============================================================================
+// Load data to bias buffer
+//=============================================================================
+    
+    localparam  DPACK_SIZE = DDR_W / DATA_W;
+    
+    reg     [6  -1 : 0] bbuf_data_cnt_r;
+    reg     [ADDR_W -1 : 0] bbuf_data_addr_r;
+    wire    [DPACK_SIZE -1 : 0][DATA_W -1 : 0] bbuf_data_pack;
+    reg     [DATA_W -1 : 0] bbuf_data_r;
+    
+    assign  bbuf_data_pack = ddr_data;
+    
+    always @ (posedge clk) begin
+        if (start) begin
+            bbuf_data_cnt_r <= 0;
+        end
+        else if (ddr_valid) begin
+            bbuf_data_cnt_r <= (bbuf_data_cnt_r == DPACK_SIZE - 1) ? 0 : bbuf_data_cnt_r + 1;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        bbuf_data_r <= bbuf_data_pack[bbuf_pack_cnt_r];
+    end
+    
+    always @ (posedge clk) begin
+        if (start) begin
+            bbuf_data_addr_r <= 0;
+        end
+        else if (ddr_valid) begin
+            bbuf_data_addr_r <= bbuf_data_addr_r + 1;
+        end
+    end
+    
+//=============================================================================
+// data and ready mux
+//=============================================================================
+    reg     [ADDR_W         -1 : 0] abuf_wr_addr_r;
+    reg     [PE_NUM         -1 : 0] abuf_wr_data_en_r;
+    reg     [PE_NUM         -1 : 0] abuf_wr_tail_en_r;
+    
+    reg     [ADDR_W -1 : 0] bbuf_wr_addr_r;
+    reg                     bbuf_wr_data_en_r;
+    reg                     bbuf_wr_tail_en_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            abuf_wr_data_en_r   <= '0;
+            abuf_wr_tail_en_r   <= '0;
+            abuf_wr_addr_r      <= 0;
+        end
+        else begin
+            case(conf_trans_type)
+            2'b00: begin
+                abuf_wr_data_en_r <= {PE_NUM(ddr_valid)} & conf_mask;
+                abuf_wr_tail_en_r <= '0;
+                abuf_wr_addr_r    <= abuf_data_addr_r;
+            end
+            2'b01: begin
+                abuf_wr_data_en_r <= '0;
+                abuf_wr_tail_en_r <= {PE_NUM(ddr_valid)} & conf_mask;
+                abuf_wr_addr_r    <= abuf_tail_addr_r;
+            end
+            default: begin
+                abuf_wr_data_en_r <= '0;
+                abuf_wr_tail_en_r <= '0;
+                abuf_wr_addr_r    <= 0;
+            end
+            endcase
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            bbuf_wr_addr_r      <= 0;
+            bbuf_wr_data_en_r   <= 0;
+            bbuf_wr_tail_en_r   <= 0;
+        end
+        else begin
+            case(conf_trans_type)
+            2'b10: begin
+                bbuf_wr_addr_r      <= bbuf_data_addr_r;
+                bbuf_wr_data_en_r   <= {PE_NUM(ddr_valid)} & conf_mask;
+                bbuf_wr_tail_en_r   <= 0;
+            end
+            2'b11: begin
+                bbuf_wr_addr_r      <= bbuf_tail_addr_r;
+                bbuf_wr_data_en_r   <= 0;
+                bbuf_wr_tail_en_r   <= {PE_NUM(ddr_valid)} & conf_mask;
+            end
+            default: begin
+                bbuf_wr_addr_r      <= 0;
+                bbuf_wr_data_en_r   <= 0;
+                bbuf_wr_tail_en_r   <= 0;
+            end
+            endcase
+        end
+    end
+    
+    assign  abuf_wr_addr    = abuf_wr_addr_r;
+    assign  abuf_wr_data    = abuf_data_buf_r;
+    assign  abuf_wr_tail    = abuf_tail_buf_r;
+    assign  abuf_wr_data_en = abuf_wr_data_en_r;
+    assign  abuf_wr_tail_en = abuf_wr_tail_en_r;
+    
+    assign  bbuf_wr_addr    = bbuf_wr_addr_r;
+    assign  bbuf_wr_data    = bbuf_data_r;
+    assign  bbuf_wr_tail    = bbuf_tail_r;
+    assign  bbuf_wr_data_en = bbuf_wr_data_en_r;
+    assign  bbuf_wr_tail_en = bbuf_wr_tail_en_r;
     
 endmodule

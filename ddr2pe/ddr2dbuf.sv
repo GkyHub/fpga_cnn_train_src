@@ -3,27 +3,31 @@ import  GLOBAL_PARAM::bw;
 
 module ddr2dbuf#(
     parameter   BUF_DEPTH   = 256,
-    parameter   ADDR_W      = bw(BUF_DEPTH)
+    parameter   ADDR_W      = bw(BUF_DEPTH),
+    parameter   PE_NUM      = 32
     )(
     input   clk,
     input   rst,
     
     // configuration port
-    input           start,
-    output          done,
-    input   [2 : 0] conf_mode,
-    input   [3 : 0] conf_ch_num,
-    input   [3 : 0] conf_row_num,    // only for conv
-    input   [3 : 0] conf_pix_num,    // only for conv
+    input                   start,
+    output                  done,
+    input   [4      -1 : 0] conf_mode,
+    input   [4      -1 : 0] conf_ch_num,
+    input   [4      -1 : 0] conf_row_num, 
+    input   [4      -1 : 0] conf_row_num, 
+    input   [4      -1 : 0] conf_pix_num, 
+    input   [4      -1 : 0] conf_pix_num, 
+    input   [PE_NUM -1 : 0] conf_mask,
     
     // ddr data stream port
     input   [DDR_W  -1 : 0] ddr_data,
     input                   ddr_valid,
     
-    // dbuf write port
-    output         [ADDR_W         -1 : 0] dbuf_wr_addr,
-    output  [3 : 0][DATA_W * BATCH -1 : 0] dbuf_wr_data,
-    output  [3 : 0]                        dbuf_wr_en
+    // dbuf write port    
+    output  [3:0][DATA_W*BATCH-1 : 0] dbuf_wr_data,
+    output  [ADDR_W -1 : 0] dbuf_wr_addr,
+    output  [PE_NUM -1 : 0] dbuf_wr_en
     );
     
 //=============================================================================
@@ -118,7 +122,7 @@ module ddr2dbuf#(
     
     reg            [bw(BUF_DEPTH)  -1 : 0] dbuf_wr_addr_r;
     reg     [3 : 0][DATA_W * BATCH -1 : 0] dbuf_wr_data_r;
-    reg     [3 : 0]                        dbuf_wr_en_r;
+    reg     [PE_NUM -1 : 0]                dbuf_wr_en_r;
     
     always @ (posedge clk) begin
         if (rst) begin
@@ -135,12 +139,12 @@ module ddr2dbuf#(
         if (mode[0]) begin
             dbuf_wr_data_r  <= ddr_data;
             dbuf_wr_addr_r  <= fc_addr_r;
-            dbuf_wr_en_r    <= ddr_valid;
+            dbuf_wr_en_r    <= {PE_NUM{ddr_valid}} & conf_mask;
         end
         else begin
             dbuf_wr_data_r  <= ddr_data_d;
             dbuf_wr_addr_r  <= conv_addr;
-            dbuf_wr_en_r    <= conv_wr_mask;
+            dbuf_wr_en_r    <= {(PE_NUM/4){conv_wr_mask}} & conf_mask;
         end
     end
     
