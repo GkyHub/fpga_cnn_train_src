@@ -32,8 +32,7 @@ module ddr2pbuf#(
     input                   ddr2_valid,
     output                  ddr2_ready,
     
-    // pbuf write port
-    
+    // pbuf write port    
     output  [3:0][DATA_W*BATCH-1:0] pbuf_wr_data,
     output  [ADDR_W -1 : 0] pbuf_wr_addr,
     output  [PE_NUM -1 : 0] pbuf_wr_en,
@@ -116,10 +115,10 @@ module ddr2pbuf#(
         else if (next_pix_r) begin
             if (pix_cnt_r == pix_num_r) begin
                 pix_cnt_r <= 0;
-                row_cnt_r <= row_cnt_r + 1;
+                row_cnt_r <= row_cnt_r + (conf_depool ? 2 : 1);
             end
             else begin
-                pix_cnt_r <= pix_cnt_r + 1;
+                pix_cnt_r <= pix_cnt_r + (conf_depool ? 2 : 1);
             end
         end
     end
@@ -249,5 +248,34 @@ module ddr2pbuf#(
     );
     
     RQ#(.DW(1), .L(6)) acc_en_q (.clk, .rst, .s(bbuf_accum_valid), .d(bbuf_accum_en));
+    
+//=============================================================================
+// done signal
+//=============================================================================
+
+    reg done_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            done_r <= 1'b1;
+        end
+        else if (start) begin
+            done_r <= 1'b0;
+        end
+        else begin
+            if (mode[2:1] == 2'b10) begin
+                if (update_last_r) begin
+                    done_r <= 1'b1;
+                end
+            end
+            else begin
+                if (param_last_r) begin
+                    done_r <= 1'b1;
+                end
+            end
+        end
+    end
+    
+    assign  done = done_r;
     
 endmodule

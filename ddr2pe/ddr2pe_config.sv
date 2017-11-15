@@ -6,8 +6,9 @@ module ddr2pe_config(
     input           clk,
     input           rst,
         
-    input   [3      -1 : 0] layer_type,
+    input   [4      -1 : 0] layer_type,
     input   [8      -1 : 0] image_width,
+    input   [4      -1 : 0] in_ch_seg,
     
     input                   ins_valid,
     output                  ins_ready,
@@ -26,6 +27,7 @@ module ddr2pe_config(
     output  [4      -1 : 0] dbuf_conf_row_num,
     output  [4      -1 : 0] dbuf_conf_pix_num,
     output  [PE_NUM -1 : 0] dbuf_conf_mask,
+    output                  dbuf_conf_depool,
     
     output                  pbuf_start,
     input                   pbuf_done,
@@ -77,6 +79,7 @@ module ddr2pe_config(
     reg     [4      -1 : 0] dbuf_conf_row_num_r;
     reg     [4      -1 : 0] dbuf_conf_pix_num_r;
     reg     [PE_NUM -1 : 0] dbuf_conf_mask_r;
+    reg                     dbuf_conf_depool_r;
     
     reg                     pbuf_start_r;
     reg     [8      -1 : 0] pbuf_conf_trans_num_r;
@@ -200,7 +203,6 @@ module ddr2pe_config(
         end
     end
     
-    // TODO: configuration position
     always @ (posedge clk) begin
         if (rst) begin
             ddr1_start_r    <= 1'b0;
@@ -209,33 +211,44 @@ module ddr2pe_config(
             ddr1_step_r     <= 0;  
             ddr1_burst_num_r<= 0;  
         end
-        else if (ins_valid && ins_ready) begin
-            ddr1_start_r    <= 1'b0;
+        else if (ins_valid && ins_ready && (opcode[3:2] == 2'b00 || opcode[3:2] == 2'b10)) begin
+            ddr1_start_r    <= 1'b1;
             ddr1_st_addr_r  <= st_addr;
-            ddr1_burst_r    <= (pix_num << 5);
-            ddr1_step_r     <= image_width;  
-            ddr1_burst_num_r<= 0;  
+            ddr1_burst_r    <= (opcode[3:2] == 2'b10) ? size : ((pix_num * in_ch_seg) << 5);
+            ddr1_step_r     <= (pix_num * image_width) << 5;
+            ddr1_burst_num_r<= (opcode[3:2] == 2'b10) ? 1 : row_num;  
         end
         else begin
             ddr1_start_r    <= 1'b0;
         end
     end
     
-    // TODO: configuration position
     always @ (posedge clk) begin
         if (rst) begin
             ddr2_start_r    <= 1'b0;
             ddr2_st_addr_r  <= 0;
             ddr2_burst_r    <= 0;
-            ddr2_step_r     <= 0;  
-            ddr2_burst_num_r<= 0;  
+            ddr2_step_r     <= 0;
+            ddr2_burst_num_r<= 0;
         end
         else if (ins_valid && ins_ready) begin
-            ddr2_start_r    <= 1'b0;
-            ddr2_st_addr_r  <= st_addr;
-            ddr2_burst_r    <= (pix_num << 5);
-            ddr2_step_r     <= image_width;  
-            ddr2_burst_num_r<= 0;  
+            if (opcode == RD_OP_G) begin
+                ddr2_start_r    <= 1'b1;
+                ddr2_st_addr_r  <= st_addr;
+                ddr2_burst_r    <= (pix_num * in_ch_seg) << 5;
+                ddr1_step_r     <= (pix_num * image_width) << 5;
+                ddr1_burst_num_r<= row_num;
+            end
+            else if (opcdoe[3:2] == 2'b01) begin
+                ddr2_start_r    <= 1'b1;
+                ddr2_st_addr_r  <= st_addr;
+                ddr2_burst_r    <= size;
+                ddr1_step_r     <= 0;
+                ddr1_burst_num_r<= 1;
+            end
+            else begin
+                ddr2_start_r    <= 1'b0;
+            end
         end
         else begin
             ddr2_start_r    <= 1'b0;
@@ -253,6 +266,7 @@ module ddr2pe_config(
     assign  dbuf_conf_row_num   = dbuf_conf_row_num_r;
     assign  dbuf_conf_pix_num   = dbuf_conf_pix_num_r;
     assign  dbuf_conf_mask      = dbuf_conf_mask_r;
+    assign  dbuf_conf_depool    = dbuf_conf_depool;
 
     assign  pbuf_start          = pbuf_start_r;
     assign  pbuf_conf_trans_num = pbuf_conf_trans_num_r;
@@ -284,5 +298,37 @@ module ddr2pe_config(
 // Status Logic
 //=============================================================================
     
+    reg     ddr1_working_r, ddr2_working_r;
+    reg     ins_ready_r;
+
+    always @ (posedge clk) begin
+        if (rst) begin
+            ddr1_working_r <= 1'b0;
+        end
+        else if (ddr1_start_r) begin
+            ddr1_working_r <= 1'b1;
+        end
+        else if (ddr1_done) begin
+            ddr1_working_r <= 1'b0;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            ddr2_working_r <= 1'b0;
+        end
+        else if (ddr2_start_r) begin
+            ddr2_working_r <= 1'b1;
+        end
+        else if (ddr2_done) begin
+            ddr2_working_r <= 1'b0;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (ins_valid) begin
+            
+        end
+    end
     
 endmodule

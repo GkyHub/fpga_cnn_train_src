@@ -77,6 +77,7 @@ module ddr2pe#(
     wire    [4      -1 : 0] dbuf_conf_row_num;
     wire    [4      -1 : 0] dbuf_conf_pix_num;
     wire    [PE_NUM -1 : 0] dbuf_conf_mask;
+    wire                    dbuf_conf_depool;
     
     wire                    pbuf_start;
     wire                    pbuf_done;
@@ -147,6 +148,7 @@ module ddr2pe#(
         .conf_row_num   (dbuf_conf_row_num  ),
         .conf_pix_num   (dbuf_conf_pix_num  ),
         .conf_mask      (dbuf_conf_mask     ),
+        .conf_depool    (dbuf_conf_depool   ),
     
         .ddr_data       (ddr1_data          ),
         .ddr_valid      (ddr1_valid         ),

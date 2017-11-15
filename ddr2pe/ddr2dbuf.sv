@@ -15,14 +15,18 @@ module ddr2dbuf#(
     input   [4      -1 : 0] conf_mode,
     input   [4      -1 : 0] conf_ch_num,
     input   [4      -1 : 0] conf_row_num, 
-    input   [4      -1 : 0] conf_row_num, 
-    input   [4      -1 : 0] conf_pix_num, 
     input   [4      -1 : 0] conf_pix_num, 
     input   [PE_NUM -1 : 0] conf_mask,
+    input                   conf_depool,
     
     // ddr data stream port
-    input   [DDR_W  -1 : 0] ddr_data,
-    input                   ddr_valid,
+    input   [DDR_W  -1 : 0] ddr1_data,
+    input                   ddr1_valid,
+    output                  ddr1_ready,
+    
+    input   [DDR_W  -1 : 0] ddr2_data,
+    input                   ddr2_valid,
+    output                  ddr2_ready,
     
     // dbuf write port    
     output  [3:0][DATA_W*BATCH-1 : 0] dbuf_wr_data,
@@ -42,17 +46,19 @@ module ddr2dbuf#(
     wire    [4      -1 : 0] conv_wr_mask;
     reg             conv_last_r;
     
+    wire    conv_ddr_valid = (conf_mode[2:1] == 2'b01) ? (ddr1_valid && ddr2_valid) : ddr1_valid;
+    
     always @ (posedge clk) begin
         if (start) begin
             ch_cnt_r <= 0;
         end
-        else if (ddr_valid) begin
+        else if (conv_ddr_valid) begin
             ch_cnt_r <= (ch_cnt_r == conf_ch_num) ? 0 : ch_cnt_r + 1;
         end
     end
     
     always @ (posedge clk) begin
-        next_pix_r  <= (ch_cnt_r == conf_ch_num) && ddr_valid;
+        next_pix_r  <= (ch_cnt_r == conf_ch_num) && conv_ddr_valid;
         ch_cnt_d    <= ch_cnt_r;
     end
     
@@ -87,8 +93,6 @@ module ddr2dbuf#(
         conv_addr[2 : 0]        <= pix_cnt_r[3 : 1]; 
     end
     
-    assign conv_wr_mask = 1 << {row_cnt_r[0], pix_cnt_r[0]};
-    
 //=============================================================================
 // FC mode
 //=============================================================================
@@ -99,7 +103,7 @@ module ddr2dbuf#(
         if (start) begin
             fc_addr_r <= 0;
         end
-        else if (ddr_valid) begin
+        else if (ddr1_valid) begin
             fc_addr_r <= fc_addr_r + 1;
         end
     end
@@ -109,7 +113,7 @@ module ddr2dbuf#(
             fc_last_r <= 1'b0;
         end
         else begin
-            fc_last_r <= ddr_valid && (fc_addr_r == conf_ch_num);
+            fc_last_r <= ddr1_valid && (fc_addr_r == conf_ch_num);
         end
     end
     
@@ -117,40 +121,91 @@ module ddr2dbuf#(
 // Address and data mux
 //=============================================================================
 
-    reg     [DDR_W  -1 : 0] ddr_data_d;
+    reg     [BATCH  -1 : 0][DATA_W  -1 : 0] ddr1_data_d;
+    reg     [BATCH  -1 : 0][DATA_W  -1 : 0] ddr2_data_d;
     reg                     ddr_valid_d;
     
-    reg            [bw(BUF_DEPTH)  -1 : 0] dbuf_wr_addr_r;
-    reg     [3 : 0][DATA_W * BATCH -1 : 0] dbuf_wr_data_r;
-    reg     [PE_NUM -1 : 0]                dbuf_wr_en_r;
+    reg     [ADDR_W -1 : 0] dbuf_wr_addr_r;
+    reg     [PE_NUM -1 : 0] dbuf_wr_en_r;
+    reg     [3 : 0][BATCH -1 : 0][DATA_W-1 : 0] dbuf_wr_data_r;    
     
     always @ (posedge clk) begin
         if (rst) begin
-            ddr_valid_d <= 0;
-            ddr_data_d  <= '0;
+            ddr_valid_d <= 1'b0;
         end
         else begin
-            ddr_valid_d <= ddr_valid;
-            ddr_data_d  <= ddr_data;
+            ddr_valid_d <= (conf_mode[2:1] == 2'b01) ? (ddr1_valid && ddr2_valid) : ddr2_valid;
         end
     end
     
     always @ (posedge clk) begin
-        if (mode[0]) begin
-            dbuf_wr_data_r  <= ddr_data;
-            dbuf_wr_addr_r  <= fc_addr_r;
-            dbuf_wr_en_r    <= {PE_NUM{ddr_valid}} & conf_mask;
+        ddr1_data_d <= ddr1_data;
+        ddr2_data_d <= ddr2_data;
+    end
+
+    always @ (posedge clk) begin
+        if (mode[2:1] == 2'b01) begin
+            dbuf_wr_addr_r <= conv_addr;
         end
         else begin
-            dbuf_wr_data_r  <= ddr_data_d;
-            dbuf_wr_addr_r  <= conv_addr;
-            dbuf_wr_en_r    <= {(PE_NUM/4){conv_wr_mask}} & conf_mask;
+            dbuf_wr_addr_r <= fc_addr_r;
         end
     end
     
-    assign dbuf_wr_data = dbuf_wr_data_r;
-    assign dbuf_wr_addr = dbuf_wr_addr_r;
-    assign dbuf_wr_en   = dbuf_wr_en_r;
+    genvar i, j;
+    generate
+        for (j = 0; j < 4; j = j + 1) begin: UNIT
+            for (i = 0; i < BATCH; i = i + 1) begin: ARRAY
+            
+                always @ (posedge clk) begin
+                    if (mode[2:1] == 2'b01) begin
+                        if (conf_depool) begin
+                            dbuf_wr_data_r[j][i] <= ddr2_data_d[i][j] ? ddr1_data_d[j][i] : '0;
+                        end
+                        else begin
+                            dbuf_wr_data_r[j][i] <= ddr2_data_d[i][j];
+                        end
+                    end
+                    else begin
+                        dbuf_wr_data_r[j][i] <= ddr1_data[DATA_W*i +: DATA_W];
+                    end
+                end
+                
+            end            
+        end
+        
+        for (i = 0; i < PE_NUM / 4; i = i + 1) begin: GROUP
+            for (j = 0; j < 4; j = j + 1) begin: UNIT
+            
+                always @ (posedge clk) begin
+                    if (rst) begin
+                        dbuf_wr_en_r[i*4+j] <= 1'b0;
+                    end
+                    else if (conf_mask[i*4+j]) begin
+                        else if (conf_mode[2:1] == 2'b10) begin
+                            if (conf_depool) begin
+                                dbuf_wr_en_r[i*4+j] <= ddr_valid_d;
+                            end
+                            else begin
+                                dbuf_wr_en_r[i*4+j] <= ddr_valid_d && ({row_cnt_r[0], pix_cnt_r[0]} == j);
+                            end
+                        end
+                        else begin
+                            dbuf_wr_en_r[i*4+j] <= ddr2_valid;
+                        end
+                    end
+                    else begin
+                        dbuf_wr_en_r[i*4+j] <= 1'b0;
+                    end
+                end
+                
+            end
+        end
+    endgenerate
+    
+    assign  dbuf_wr_addr    = dbuf_wr_addr_r;
+    assign  dbuf_wr_data    = dbuf_wr_data_r;
+    assign  dbuf_wr_en      = dbuf_wr_en_r;
     
 //=============================================================================
 // done signal

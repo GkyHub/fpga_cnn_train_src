@@ -31,7 +31,7 @@ package INS_CONST;
     // [39:32] size
     // [31: 0] ddr address
     localparam RD_OP_D      = 4'b0000;  // neuron
-    localparam RD_OP_G      = 4'b0010;  // neuron gradient
+    localparam RD_OP_G      = 4'b0001;  // neuron gradient
     localparam RD_OP_DW     = 4'b0100;  // weights MSB
     localparam RD_OP_DB     = 4'b0101;  // bias MSB
     localparam RD_OP_TW     = 4'b0110;  // weights LSB
