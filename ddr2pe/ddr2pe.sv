@@ -101,6 +101,8 @@ module ddr2pe#(
     wire    [8      -1 : 0] abuf_conf_trans_num;
     wire    [PE_NUM -1 : 0] abuf_conf_mask;
     
+    wire            dbuf_ddr1_ready;
+    wire            dbuf_ddr2_ready;
     wire            ibuf_ddr2_ready;
     wire            pbuf_ddr1_ready;
     wire            pbuf_ddr2_ready;
@@ -119,6 +121,9 @@ module ddr2pe#(
     wire    [BURST_W    -1 : 0] ddr2_burst;
     wire    [DDR_ADDR_W -1 : 0] ddr2_step;
     wire    [BURST_W    -1 : 0] ddr2_burst_num;
+    
+    wire            ddr1_ready_mux;
+    wire    [1 : 0] ddr2_ready_mux;
     
     ddr2pe_config#(
         .PE_NUM (PE_NUM ),
@@ -177,7 +182,10 @@ module ddr2pe#(
         .ddr2_st_addr   (ddr2_st_addr   ),
         .ddr2_burst     (ddr2_burst     ),
         .ddr2_step      (ddr2_step      ),
-        .ddr2_burst_num (ddr2_burst_num )
+        .ddr2_burst_num (ddr2_burst_num ),
+        
+        .ddr1_ready_mux (ddr1_ready_mux ),
+        .ddr2_ready_mux (ddr2_ready_mux )
     );
     
     ddr2ibuf#(
@@ -216,8 +224,13 @@ module ddr2pe#(
         .conf_mask      (dbuf_conf_mask     ),
         .conf_depool    (dbuf_conf_depool   ),
     
-        .ddr_data       (ddr1_data          ),
-        .ddr_valid      (ddr1_valid         ),
+        .ddr1_data      (ddr1_data          ),
+        .ddr1_valid     (ddr1_valid         ),
+        .ddr1_ready     (dbuf_ddr1_ready    ),
+        
+        .ddr2_data      (ddr2_data          ),
+        .ddr2_valid     (ddr2_valid         ),
+        .ddr2_ready     (dbuf_ddr2_ready    ),
         
         .dbuf_wr_addr   (dbuf_wr_addr       ),
         .dbuf_wr_data   (dbuf_wr_data       ),
@@ -328,5 +341,10 @@ module ddr2pe#(
         .ddr_addr_valid (ddr2_addr_valid),
         .ddr_addr_ready (ddr2_addr_ready)
     );
+    
+    assign  ddr1_ready = ddr1_ready_mux ? pbuf_ddr1_ready : dbuf_ddr1_ready;
+    assign  ddr2_ready = ddr2_ready_mux[0] ? 
+                        (ddr2_ready_mux[1] ? abuf_ddr2_ready : ibuf_ddr2_ready) :
+                        (ddr2_ready_mux[1] ? pbuf_ddr2_ready : dbuf_ddr2_ready);
     
 endmodule

@@ -59,7 +59,10 @@ module ddr2pe_config#(
     output  [DDR_ADDR_W -1 : 0] ddr2_st_addr,
     output  [BURST_W    -1 : 0] ddr2_burst,
     output  [DDR_ADDR_W -1 : 0] ddr2_step,
-    output  [BURST_W    -1 : 0] ddr2_burst_num
+    output  [BURST_W    -1 : 0] ddr2_burst_num,
+    
+    output          ddr1_ready_mux,
+    output  [1 : 0] ddr2_ready_mux
     );
     
     wire    [3 : 0] opcode  = ins[61:58];
@@ -347,5 +350,41 @@ module ddr2pe_config#(
     end
     
     assign  ins_ready = ready_r;
+
+//=============================================================================
+// DDR ready signal mux control
+//=============================================================================
+    reg             ddr1_ready_mux_r;
+    reg     [1 : 0] ddr2_ready_mux_r;    
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            ddr1_ready_mux_r <= 1'b0;
+        end
+        else if (dbuf_start_r) begin
+            ddr1_ready_mux_r <= 1'b0
+        end
+        else if (pbuf_start_r) begin
+            ddr1_ready_mux_r <= 1'b1;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            ddr2_ready_mux_r <= 2'b00;
+        end
+        else begin
+            unique case(
+                {dbuf_start_r, ibuf_start_r, pbuf_start_r, abuf_start_r})
+            4'b1000: ddr2_ready_mux_r <= 2'b00;
+            4'b0100: ddr2_ready_mux_r <= 2'b01;
+            4'b0110: ddr2_ready_mux_r <= 2'b01;
+            4'b0010: ddr2_ready_mux_r <= 2'b10;
+            4'b0001: ddr2_ready_mux_r <= 2'b11;
+            4'b0000: ddr2_ready_mux_r <= 2'b00;
+            endcase
+        end
+    end
+    
     
 endmodule
