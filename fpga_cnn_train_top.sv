@@ -1,3 +1,5 @@
+import  GLOBAL_PARAM::*;
+
 module fpga_cnn_train_top#(
     parameter   PE_NUM  = 32
     )(
@@ -88,9 +90,26 @@ module fpga_cnn_train_top#(
     wire           [ADDR_W         -1 : 0] abuf_rd_addr;
     wire    [3 : 0][BATCH * RES_W  -1 : 0] abuf_rd_data;
     
-    wire    [ADDR_W -1 : 0] bbuf_rd_addr,
-    wire    [RES_W  -1 : 0] bbuf_rd_data
+    wire    [ADDR_W -1 : 0] bbuf_rd_addr;
+    wire    [RES_W  -1 : 0] bbuf_rd_data;
     
+    wire    [PE_NUM -1 : 0] switch_d;
+    wire    [PE_NUM -1 : 0] switch_p;
+    wire    [PE_NUM -1 : 0] switch_i;
+    wire    [PE_NUM -1 : 0] switch_a;
+    wire                    switch_b;
+
+    wire    [PE_NUM -1 : 0] start;
+    wire    [PE_NUM -1 : 0] done;
+    wire    [3      -1 : 0] mode;
+    wire    [8      -1 : 0] idx_cnt;  
+    wire    [8      -1 : 0] trip_cnt; 
+    wire                    is_new;
+    wire    [4      -1 : 0] pad_code; 
+    wire                    cut_y;
+
+    wire    [bw(PE_NUM / 4) -1 : 0] rd_sel;
+ 
     ddr2pe#(
         .BUF_DEPTH  (BUF_DEPTH  ),
         .IDX_DEPTH  (IDX_DEPTH  ),
@@ -164,10 +183,10 @@ module fpga_cnn_train_top#(
         .rst    (rst    ),
     
     // PE control interface
-    input   [PE_NUM -1 : 0] switch_d,   // switch the ping pong buffer data
-    input   [PE_NUM -1 : 0] switch_p,   // switch the ping pong buffer param
-    input   [PE_NUM -1 : 0] switch_i,   // switch the ping pong buffer idx
-    input   [PE_NUM -1 : 0] switch_a,   // switch the ping pong buffer accum
+    input   [PE_NUM -1 : 0] switch_d,
+    input   [PE_NUM -1 : 0] switch_p,
+    input   [PE_NUM -1 : 0] switch_i,
+    input   [PE_NUM -1 : 0] switch_a,
     input                   switch_b,
     
     input   [PE_NUM -1 : 0] start,
