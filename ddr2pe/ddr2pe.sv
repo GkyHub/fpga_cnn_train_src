@@ -28,7 +28,7 @@ module ddr2pe#(
     output  [DDR_ADDR_W -1 : 0] ddr1_addr,
     output  [BURST_W    -1 : 0] ddr1_size,
     output                      ddr1_addr_valid,
-    input                       ddr1_addr_ready
+    input                       ddr1_addr_ready,
     
     input   [DDR_W      -1 : 0] ddr2_data,
     input                       ddr2_valid,
@@ -37,7 +37,7 @@ module ddr2pe#(
     output  [DDR_ADDR_W -1 : 0] ddr2_addr,
     output  [BURST_W    -1 : 0] ddr2_size,
     output                      ddr2_addr_valid,
-    input                       ddr2_addr_ready
+    input                       ddr2_addr_ready,
     
     output  [IDX_W*2        -1 : 0] idx_wr_data,
     output  [bw(IDX_DEPTH)  -1 : 0] idx_wr_addr,
