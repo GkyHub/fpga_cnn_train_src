@@ -13,6 +13,14 @@ module ddr2pe#(
     input   clk,
     input   rst,
     
+    input   [4      -1 : 0] layer_type,
+    input   [8      -1 : 0] image_width,
+    input   [4      -1 : 0] in_ch_seg,
+    
+    input                   ins_valid,
+    output                  ins_ready,
+    input   [INST_W -1 : 0] ins,
+    
     input   [DDR_W      -1 : 0] ddr1_data,
     input                       ddr1_valid,
     output                      ddr1_ready,
@@ -30,8 +38,6 @@ module ddr2pe#(
     output  [BURST_W    -1 : 0] ddr2_size,
     output                      ddr2_addr_valid,
     input                       ddr2_addr_ready
-    
-    output  [PE_NUM / 4     -1 : 0] wr_sel,
     
     output  [IDX_W*2        -1 : 0] idx_wr_data,
     output  [bw(IDX_DEPTH)  -1 : 0] idx_wr_addr,
@@ -113,6 +119,66 @@ module ddr2pe#(
     wire    [BURST_W    -1 : 0] ddr2_burst;
     wire    [DDR_ADDR_W -1 : 0] ddr2_step;
     wire    [BURST_W    -1 : 0] ddr2_burst_num;
+    
+    ddr2pe_config#(
+        .PE_NUM (PE_NUM ),
+    ) ddr2pe_config_inst (
+        .clk        (clk        ),
+        .rst        (rst        ),
+        
+        .layer_type (layer_type ),
+        .image_width(image_width),
+        .in_ch_seg  (in_ch_seg  ),
+    
+        .ins_valid  (ins_valid  ),
+        .ins_ready  (ins_ready  ),
+        .ins        (ins        ),
+    
+        .ibuf_start         (ibuf_start         ),
+        .ibuf_done          (ibuf_done          ),
+        .ibuf_conf_mode     (ibuf_conf_mode     ),
+        .ibuf_conf_idx_num  (ibuf_conf_idx_num  ),
+        .ibuf_conf_mask     (ibuf_conf_mask     ),
+    
+        .dbuf_start         (dbuf_start         ),
+        .dbuf_done          (dbuf_done          ),
+        .dbuf_conf_mode     (dbuf_conf_mode     ),
+        .dbuf_conf_ch_num   (dbuf_conf_ch_num   ),
+        .dbuf_conf_row_num  (dbuf_conf_row_num  ),
+        .dbuf_conf_pix_num  (dbuf_conf_pix_num  ),
+        .dbuf_conf_mask     (dbuf_conf_mask     ),
+        .dbuf_conf_depool   (dbuf_conf_depool   ),
+    
+        .pbuf_start         (pbuf_start         ),
+        .pbuf_done          (pbuf_done          ),
+        .pbuf_conf_trans_num(pbuf_conf_trans_num),
+        .pbuf_conf_mode     (pbuf_conf_mode     ),     
+        .pbuf_conf_ch_num   (pbuf_conf_ch_num   ),   
+        .pbuf_conf_pix_num  (pbuf_conf_pix_num  ),  
+        .pbuf_conf_row_num  (pbuf_conf_row_num  ),  
+        .pbuf_conf_depool   (pbuf_conf_depool   ),
+        .pbuf_conf_mask     (pbuf_conf_mask     ),
+
+        .abuf_start             (abuf_start             ),
+        .abuf_done              (abuf_done              ),
+        .abuf_conf_trans_type   (abuf_conf_trans_type   ),
+        .abuf_conf_trans_num    (abuf_conf_trans_num    ),
+        .abuf_conf_mask         (abuf_conf_mask         ),
+    
+        .ddr1_start     (ddr1_start     ),
+        .ddr1_done      (ddr1_done      ),
+        .ddr1_st_addr   (ddr1_st_addr   ),
+        .ddr1_burst     (ddr1_burst     ),
+        .ddr1_step      (ddr1_step      ),
+        .ddr1_burst_num (ddr1_burst_num ),
+    
+        .ddr2_start     (ddr2_start     ),
+        .ddr2_done      (ddr2_done      ),
+        .ddr2_st_addr   (ddr2_st_addr   ),
+        .ddr2_burst     (ddr2_burst     ),
+        .ddr2_step      (ddr2_step      ),
+        .ddr2_burst_num (ddr2_burst_num )
+    );
     
     ddr2ibuf#(
         .IDX_DEPTH  (IDX_DEPTH  )

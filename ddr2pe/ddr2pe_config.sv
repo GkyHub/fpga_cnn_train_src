@@ -2,7 +2,9 @@ import GLOBAL_PARAM::DDR_ADDR_W;
 import GLOBAL_PARAM::BURST_W;
 import INS_CONST::*;
 
-module ddr2pe_config(
+module ddr2pe_config#(
+    parameter   PE_NUM  = 32
+    )(
     input           clk,
     input           rst,
         
@@ -119,7 +121,7 @@ module ddr2pe_config(
             ibuf_conf_idx_num_r <= 0;
             ibuf_conf_mask_r    <= '0;
         end
-        else if (ins_valid && ins_ready && opcode == RD_OP_I) begin
+        else if (ins_valid && ins_ready && opcode == RD_OP_DW) begin
             ibuf_start_r        <= 1'b1;
             ibuf_conf_mode_r    <= layer_type;
             ibuf_conf_idx_num_r <= size;
@@ -211,12 +213,24 @@ module ddr2pe_config(
             ddr1_step_r     <= 0;  
             ddr1_burst_num_r<= 0;  
         end
-        else if (ins_valid && ins_ready && (opcode[3:2] == 2'b00 || opcode[3:2] == 2'b10)) begin
-            ddr1_start_r    <= 1'b1;
-            ddr1_st_addr_r  <= st_addr;
-            ddr1_burst_r    <= (opcode[3:2] == 2'b10) ? size : ((pix_num * in_ch_seg) << 5);
-            ddr1_step_r     <= (pix_num * image_width) << 5;
-            ddr1_burst_num_r<= (opcode[3:2] == 2'b10) ? 1 : row_num;  
+        else if (ins_valid && ins_ready && (opcode[3:2] == 2'b00 || opcode == 4'b0100)) begin
+            if (opcode[3:2] == 2'b00) begin
+                ddr1_start_r    <= 1'b1;
+                ddr1_st_addr_r  <= st_addr;
+                ddr1_burst_r    <= size;
+                ddr1_step_r     <= 0;
+                ddr1_burst_num_r<= 1;
+            end
+            else if (opcode == 4'b0100) begin
+                ddr1_start_r    <= 1'b1;
+                ddr1_st_addr_r  <= st_addr;
+                ddr1_burst_r    <= (pix_num * in_ch_seg) << 5;
+                ddr1_step_r     <= (pix_num * image_width) << 5;
+                ddr1_burst_num_r<= row_num;
+            end
+            else begin
+                ddr1_start_r    <= 1'b0;
+            end
         end
         else begin
             ddr1_start_r    <= 1'b0;
@@ -298,37 +312,40 @@ module ddr2pe_config(
 // Status Logic
 //=============================================================================
     
-    reg     ddr1_working_r, ddr2_working_r;
-    reg     ins_ready_r;
-
-    always @ (posedge clk) begin
-        if (rst) begin
-            ddr1_working_r <= 1'b0;
-        end
-        else if (ddr1_start_r) begin
-            ddr1_working_r <= 1'b1;
-        end
-        else if (ddr1_done) begin
-            ddr1_working_r <= 1'b0;
-        end
-    end
+    localparam STAT_IDLE = 2'b00;
+    localparam STAT_CONF = 2'b01;
+    localparam STAT_WORK = 2'b10;
+    
+    reg     [1 : 0] config_stat_r;
+    wire    all_done = ibuf_done && pbuf_done && dbuf_done && abuf_done;
     
     always @ (posedge clk) begin
         if (rst) begin
-            ddr2_working_r <= 1'b0;
+            config_stat_r   <= STAT_IDLE;
         end
-        else if (ddr2_start_r) begin
-            ddr2_working_r <= 1'b1;
-        end
-        else if (ddr2_done) begin
-            ddr2_working_r <= 1'b0;
+        else begin
+            case(config_stat_r)
+            STAT_IDLE: config_stat_r <= (ins_valid && ins_ready) ? STAT_CONFIG : STAT_WORK;
+            STAT_CONF: config_stat_r <= STAT_WORK;
+            STAT_WORK: config_stat_r <= (&all_done) ? STAT_IDLE : STAT_WORK;
+            endcase
         end
     end
     
+    reg     ready_r;
+    
     always @ (posedge clk) begin
-        if (ins_valid) begin
-            
+        if (rst) begin
+            ready_r <= 1'b1;
+        end
+        else if (ins_ready && ins_valid) begin
+            ready_r <= 1'b0;
+        end
+        else if (config_stat_r == STAT_WORK && all_done) begin
+            ready_r <= 1'b1;
         end
     end
+    
+    assign  ins_ready = ready_r;
     
 endmodule

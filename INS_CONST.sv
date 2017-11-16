@@ -36,7 +36,7 @@ package INS_CONST;
     localparam RD_OP_DB     = 4'b0101;  // bias MSB
     localparam RD_OP_TW     = 4'b0110;  // weights LSB
     localparam RD_OP_TB     = 4'b0111;  // bias LSB
-    localparam RD_OP_I      = 4'b1000;  // index
+    // localparam RD_OP_I      = 4'b1000;  // read index when read RD_OP_DW
     
     // save instruction opcode
     localparam WR_OP_D      = 4'b0000;
