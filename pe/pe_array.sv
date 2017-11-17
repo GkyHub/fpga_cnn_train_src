@@ -40,16 +40,16 @@ module pe_array#(
     input   [3 : 0][DATA_W * BATCH -1 : 0] dbuf_wr_data,
     input   [PE_NUM -1 : 0]                dbuf_wr_en,
     
-    input   [3 : 0][ADDR_W         -1 : 0] pbuf_wr_addr,
+    input          [ADDR_W         -1 : 0] pbuf_wr_addr,
     input   [3 : 0][DATA_W * BATCH -1 : 0] pbuf_wr_data,
     input   [PE_NUM -1 : 0]                pbuf_wr_en,
     
-    input   [3 : 0][ADDR_W         -1 : 0] abuf_wr_addr,
-    input   [3 : 0][BATCH * DATA_W -1 : 0] abuf_wr_data,
-    input   [PE_NUM -1 : 0]                abuf_wr_data_en,
-    input   [3 : 0][BATCH * TAIL_W -1 : 0] abuf_wr_tail,
-    input   [PE_NUM -1 : 0]                abuf_wr_tail_en,     
-    input          [ADDR_W         -1 : 0] abuf_rd_addr,
+    input   [ADDR_W         -1 : 0] abuf_wr_addr,
+    input   [BATCH * DATA_W -1 : 0] abuf_wr_data,
+    input   [PE_NUM         -1 : 0] abuf_wr_data_en,
+    input   [BATCH * TAIL_W -1 : 0] abuf_wr_tail,
+    input   [PE_NUM         -1 : 0] abuf_wr_tail_en,     
+    input   [ADDR_W         -1 : 0] abuf_rd_addr,
     output  [3 : 0][BATCH * RES_W  -1 : 0] abuf_rd_data,
     
     input                   bbuf_acc_en,
@@ -122,14 +122,14 @@ module pe_array#(
                     .dbuf_wr_data   (dbuf_wr_data[j]            ),
                     .dbuf_wr_en     (dbuf_wr_en[i*4+j]          ),
                 
-                    .pbuf_wr_addr   (pbuf_wr_addr[j]            ),
+                    .pbuf_wr_addr   (pbuf_wr_addr               ),
                     .pbuf_wr_data   (pbuf_wr_data[j]            ),
                     .pbuf_wr_en     (pbuf_wr_en[i*4+j]          ),
                 
-                    .abuf_wr_addr   (abuf_wr_addr[j]            ),
-                    .abuf_wr_data   (abuf_wr_data[j]            ),
+                    .abuf_wr_addr   (abuf_wr_addr               ),
+                    .abuf_wr_data   (abuf_wr_data               ),
                     .abuf_wr_data_en(abuf_wr_data_en[i*4+j]     ),
-                    .abuf_wr_tail   (abuf_wr_tail[j]            ),
+                    .abuf_wr_tail   (abuf_wr_tail               ),
                     .abuf_wr_tail_en(abuf_wr_tail_en[i*4+j]     ),
                     .abuf_rd_addr   (abuf_rd_addr               ),
                     .abuf_rd_data   (grp_abuf_rd_data[i][j]     )

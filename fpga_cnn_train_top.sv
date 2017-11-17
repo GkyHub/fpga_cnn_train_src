@@ -68,15 +68,15 @@ module fpga_cnn_train_top#(
     wire    [3 : 0][DATA_W * BATCH -1 : 0] dbuf_wr_data;
     wire    [PE_NUM -1 : 0]                dbuf_wr_en;
 
-    wire    [3 : 0][ADDR_W         -1 : 0] pbuf_wr_addr;
+    wire    [ADDR_W         -1 : 0]        pbuf_wr_addr;
     wire    [3 : 0][DATA_W * BATCH -1 : 0] pbuf_wr_data;
     wire    [PE_NUM -1 : 0]                pbuf_wr_en;
 
-    wire    [3 : 0][ADDR_W         -1 : 0] abuf_wr_addr;
-    wire    [3 : 0][BATCH * DATA_W -1 : 0] abuf_wr_data;
-    wire    [PE_NUM -1 : 0]                abuf_wr_data_en;
-    wire    [3 : 0][BATCH * TAIL_W -1 : 0] abuf_wr_tail;
-    wire    [PE_NUM -1 : 0]                abuf_wr_tail_en;
+    wire    [ADDR_W         -1 : 0] abuf_wr_addr;
+    wire    [BATCH * DATA_W -1 : 0] abuf_wr_data;
+    wire    [PE_NUM         -1 : 0] abuf_wr_data_en;
+    wire    [BATCH * TAIL_W -1 : 0] abuf_wr_tail;
+    wire    [PE_NUM         -1 : 0] abuf_wr_tail_en;
     
     wire                    bbuf_acc_en;
     wire                    bbuf_acc_new;
@@ -158,10 +158,10 @@ module fpga_cnn_train_top#(
         .pbuf_wr_data   (pbuf_wr_data       ),
         .pbuf_wr_en     (pbuf_wr_en         ),
     
-        .bbuf_accum_en  (bbuf_accum_en      ),
-        .bbuf_accum_new (bbuf_accum_new     ),
-        .bbuf_accum_addr(bbuf_accum_addr    ),
-        .bbuf_accum_data(bbuf_accum_data    ),
+        .bbuf_acc_en    (bbuf_acc_en        ),
+        .bbuf_acc_new   (bbuf_acc_new       ),
+        .bbuf_acc_addr  (bbuf_acc_addr      ),
+        .bbuf_acc_data  (bbuf_acc_data      ),
     
         .abuf_wr_addr   (abuf_wr_addr       ),
         .abuf_wr_data   (abuf_wr_data       ),
@@ -213,10 +213,10 @@ module fpga_cnn_train_top#(
         .pbuf_wr_data   (pbuf_wr_data       ),
         .pbuf_wr_en     (pbuf_wr_en         ),
     
-        .bbuf_accum_en  (bbuf_accum_en      ),
-        .bbuf_accum_new (bbuf_accum_new     ),
-        .bbuf_accum_addr(bbuf_accum_addr    ),
-        .bbuf_accum_data(bbuf_accum_data    ),
+        .bbuf_acc_en    (bbuf_acc_en        ),
+        .bbuf_acc_new   (bbuf_acc_new       ),
+        .bbuf_acc_addr  (bbuf_acc_addr      ),
+        .bbuf_acc_data  (bbuf_acc_data      ),
     
         .abuf_wr_addr   (abuf_wr_addr       ),
         .abuf_wr_data   (abuf_wr_data       ),

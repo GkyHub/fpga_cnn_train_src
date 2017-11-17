@@ -38,10 +38,10 @@ module ddr2pbuf#(
     output  [PE_NUM -1 : 0] pbuf_wr_en,
     
     // bbuf accumulation port
-    input                   bbuf_accum_en,
-    input                   bbuf_accum_new,
-    input   [ADDR_W -1 : 0] bbuf_accum_addr,
-    input   [RES_W  -1 : 0] bbuf_accum_data
+    input                   bbuf_acc_en,
+    input                   bbuf_acc_new,
+    input   [ADDR_W -1 : 0] bbuf_acc_addr,
+    input   [RES_W  -1 : 0] bbuf_acc_data
     );
 
 //=============================================================================
@@ -232,9 +232,10 @@ module ddr2pbuf#(
 // update bias
 //=============================================================================
     wire    [RES_W  -1 : 0] channel_sum;
-    wire    bbuf_accum_valid = (conf_mode[2:1] == 2'b10) && (ddr1_valid && ddr2_valid);
+    wire    bbuf_acc_valid = (conf_mode[2:1] == 2'b10) && (ddr1_valid && ddr2_valid);
     
-    assign  bbuf_accum_new = 1'b0;
+    assign  bbuf_acc_new = 1'b0;
+    assign  bbuf_acc_data = channel_sum;
     
     adder_tree#(
         .DATA_W (DATA_W ),
@@ -247,7 +248,7 @@ module ddr2pbuf#(
         .sum    (channel_sum)
     );
     
-    RQ#(.DW(1), .L(6)) acc_en_q (.clk, .rst, .s(bbuf_accum_valid), .d(bbuf_accum_en));
+    RPipe#(.DW(1), .L(6)) acc_en_q (.clk, .rst, .s(bbuf_acc_valid), .d(bbuf_acc_en));
     
 //=============================================================================
 // done signal

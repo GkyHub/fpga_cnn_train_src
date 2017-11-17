@@ -40,18 +40,18 @@ module ddr2pe#(
     output  [bw(IDX_DEPTH)  -1 : 0] idx_wr_addr,
     output  [PE_NUM         -1 : 0] idx_wr_en,
     
-    output         [bw(BUF_DEPTH)  -1 : 0] dbuf_wr_addr,
+    output  [ADDR_W  -1 : 0]               dbuf_wr_addr,
     output  [3 : 0][DATA_W * BATCH -1 : 0] dbuf_wr_data,
     output  [PE_NUM -1 : 0]                dbuf_wr_en,
     
-    output  [3 : 0][bw(BUF_DEPTH)  -1 : 0] pbuf_wr_addr,
+    output  [ADDR_W  -1 : 0]               pbuf_wr_addr,
     output  [3 : 0][DATA_W * BATCH -1 : 0] pbuf_wr_data,
     output  [PE_NUM -1 : 0]                pbuf_wr_en,
     
-    output                  bbuf_accum_en,
-    output                  bbuf_accum_new,
-    output  [ADDR_W -1 : 0] bbuf_accum_addr,
-    output  [RES_W  -1 : 0] bbuf_accum_data,
+    output                  bbuf_acc_en,
+    output                  bbuf_acc_new,
+    output  [ADDR_W -1 : 0] bbuf_acc_addr,
+    output  [RES_W  -1 : 0] bbuf_acc_data,
     
     // accum and bias buf port
     output  [ADDR_W         -1 : 0] abuf_wr_addr,
@@ -262,10 +262,10 @@ module ddr2pe#(
         .pbuf_wr_data   (pbuf_wr_data       ),
         .pbuf_wr_en     (pbuf_wr_en         ),
     
-        .bbuf_accum_en  (bbuf_accum_en      ),
-        .bbuf_accum_new (bbuf_accum_new     ),
-        .bbuf_accum_addr(bbuf_accum_addr    ),
-        .bbuf_accum_data(bbuf_accum_data    )
+        .bbuf_acc_en    (bbuf_acc_en        ),
+        .bbuf_acc_new   (bbuf_acc_new       ),
+        .bbuf_acc_addr  (bbuf_acc_addr      ),
+        .bbuf_acc_data  (bbuf_acc_data      )
     );
     
     ddr2abuf#(
@@ -279,6 +279,7 @@ module ddr2pe#(
         .done           (abuf_done              ),
         .conf_trans_type(abuf_conf_trans_type   ),
         .conf_trans_num (abuf_conf_trans_num    ),
+        .conf_mask      (abuf_conf_mask         ),
     
         // ddr data stream port
         .ddr_data       (ddr2_data              ),

@@ -43,7 +43,7 @@ module accum_buf#(
     
     reg     [BATCH  -1 : 0][RES_W   -1 : 0] accum_res_r;
     wire    [BATCH  -1 : 0][DATA_W  -1 : 0] accum_wr_data;
-    wire    [BATCH  -1 : 0][DATA_W  -1 : 0] accum_wr_tail; 
+    wire    [BATCH  -1 : 0][TAIL_W  -1 : 0] accum_wr_tail; 
     wire    [BATCH  -1 : 0][RES_W   -1 : 0] accum_rd_pack;
     wire    [BATCH  -1 : 0][DATA_W  -1 : 0] accum_rd_data;
     wire    [BATCH  -1 : 0][TAIL_W  -1 : 0] accum_rd_tail;

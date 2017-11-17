@@ -30,7 +30,7 @@ module pe#(
     input   [4  -1 : 0] pad_code, 
     input               cut_y,
     
-    input   [3 : 0][DATA_W * BATCH  -1 : 0] share_data_in,
+    input   [2 : 0][DATA_W * BATCH  -1 : 0] share_data_in,
     output  [DATA_W * BATCH -1 : 0] share_data_out,
     
     input   [IDX_W*2        -1 : 0] idx_wr_data,
@@ -151,25 +151,20 @@ module pe#(
     
     Pipe#(.DW(3), .L(3)) dbuf_sel_pipe (.clk, 
         .s({dbuf_mask, dbuf_mux}), .d({dbuf_mask_d, dbuf_mux_d}));
-        
-    generate
-        for (i = 1; i < BATCH; i++) begin: DATA_SEL
-            always @ (posedge clk) begin
-                if (dbuf_mask_d) begin
-                    case(dbuf_mux)
-                    2'b00: data_vec_sel_r[i] <= share_data_in[0][i];
-                    2'b01: data_vec_sel_r[i] <= share_data_in[1][i];
-                    2'b10: data_vec_sel_r[i] <= share_data_in[2][i];
-                    2'b11: data_vec_sel_r[i] <= share_data_in[3][i];
-                    endcase
-                end
-                else begin
-                    data_vec_sel_r[i] <= 0;
-                end
-            end
-        end
-    endgenerate
     
+    always @ (posedge clk) begin
+        if (dbuf_mask_d) begin
+            case(dbuf_mux)
+            2'b00: data_vec_sel_r <= share_data_out;
+            2'b01: data_vec_sel_r <= share_data_in[0];
+            2'b10: data_vec_sel_r <= share_data_in[1];
+            2'b11: data_vec_sel_r <= share_data_in[2];
+            endcase
+        end
+        else begin
+            data_vec_sel_r <= '0;
+        end
+    end    
     
     mac_array#(
         .BATCH  (BATCH  ),
