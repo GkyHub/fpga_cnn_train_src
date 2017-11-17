@@ -1,6 +1,7 @@
 import GLOBAL_PARAM::bw;
 import GLOBAL_PARAM::RES_W;
 import GLOBAL_PARAM::TAIL_W;
+import  GLOBAL_PARAM::DATA_W;
 
 module accum_buf#(
     parameter   DEPTH   = 256,

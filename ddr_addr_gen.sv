@@ -25,6 +25,8 @@ module ddr_addr_gen#(
     reg     [BURST_W    -1 : 0] burst_cnt_r;
     reg     done_r;
     
+    reg     ddr_addr_valid_r;
+    
     always @ (posedge clk) begin
         if (rst) begin
             burst_r     <= 0;
@@ -43,7 +45,7 @@ module ddr_addr_gen#(
             ddr_addr_r <= st_addr;
             burst_cnt_r<= 0;
         end
-        else if (ddr_ready && burst_cnt_r < burst_num_r) begin
+        else if (ddr_addr_ready && burst_cnt_r < burst_num_r) begin
             ddr_addr_r <= ddr_addr_r + step_r;
             burst_cnt_r<= burst_cnt_r + 1;
         end

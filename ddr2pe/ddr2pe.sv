@@ -1,14 +1,11 @@
-import GLOBAL_PARAM::DDR_W;
-import GLOBAL_PARAM::DATA_W;
-import GLOBAL_PARAM::BATCH;
-import GLOBAL_PARAM::DDR_ADDR_W;
-import GLOBAL_PARAM::BURST_W;
-import GLOBAL_PARAM::bw;
+import GLOBAL_PARAM::*;
+import INS_CONST::INST_W;
 
 module ddr2pe#(
     parameter   BUF_DEPTH   = 256,
     parameter   IDX_DEPTH   = 256,
-    parameter   PE_NUM      = 32
+    parameter   PE_NUM      = 32,
+    parameter   ADDR_W      = bw(BUF_DEPTH)
     )(
     input   clk,
     input   rst,
@@ -126,7 +123,7 @@ module ddr2pe#(
     wire    [1 : 0] ddr2_ready_mux;
     
     ddr2pe_config#(
-        .PE_NUM (PE_NUM ),
+        .PE_NUM (PE_NUM )
     ) ddr2pe_config_inst (
         .clk        (clk        ),
         .rst        (rst        ),
@@ -238,7 +235,7 @@ module ddr2pe#(
     );
     
     ddr2pbuf#(
-        .BUF_DEPTH  (BUF_DEPTH  ),
+        .BUF_DEPTH  (BUF_DEPTH  )
     ) ddr2pbuf_inst (
         .clk            (clk                ),
         .rst            (rst                ),

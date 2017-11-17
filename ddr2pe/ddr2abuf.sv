@@ -1,3 +1,4 @@
+import  GLOBAL_PARAM::DDR_W;
 import  GLOBAL_PARAM::BATCH;
 import  GLOBAL_PARAM::DATA_W;
 import  GLOBAL_PARAM::TAIL_W;
@@ -45,11 +46,11 @@ module ddr2abuf#(
     reg     [3      -1 : 0] abuf_pack_cnt_r;
     reg                     abuf_next_pack_r;
     
-    wire    [TD_RATE-1:0][BATCH-1:0][DATA_W-1:0] abuf_tail_buf_r;
+    reg     [TD_RATE-1:0][BATCH-1:0][DATA_W-1:0] abuf_tail_buf_r;
     
     always @ (posedge clk) begin
         if (start) begin
-            abuf_addr_r     <= 0;
+            abuf_tail_addr_r<= 0;
             abuf_pack_cnt_r <= 0; 
         end
         else if (ddr_valid) begin
@@ -107,7 +108,7 @@ module ddr2abuf#(
     wire    [TPACK_SIZE -1 : 0][TAIL_W -1 : 0] bbuf_tail_pack;
     reg     [TAIL_W -1 : 0] bbuf_tail_r;
     
-    assign  bbuf_data_pack = ddr_data[TPACK_SIZE*DATA_W-1 : 0];
+    assign  bbuf_tail_pack = ddr_data[TPACK_SIZE*DATA_W-1 : 0];
     
     always @ (posedge clk) begin
         if (start) begin
@@ -119,7 +120,7 @@ module ddr2abuf#(
     end
     
     always @ (posedge clk) begin
-        bbuf_tail_r <= bbuf_tail_pack[bbuf_data_cnt_r];
+        bbuf_tail_r <= bbuf_tail_pack[bbuf_tail_cnt_r];
     end
     
     always @ (posedge clk) begin
@@ -154,7 +155,7 @@ module ddr2abuf#(
     end
     
     always @ (posedge clk) begin
-        bbuf_data_r <= bbuf_data_pack[bbuf_pack_cnt_r];
+        bbuf_data_r <= bbuf_data_pack[bbuf_data_cnt_r];
     end
     
     always @ (posedge clk) begin
@@ -186,13 +187,13 @@ module ddr2abuf#(
         else begin
             case(conf_trans_type)
             2'b00: begin
-                abuf_wr_data_en_r <= {PE_NUM(ddr_valid)} & conf_mask;
+                abuf_wr_data_en_r <= {PE_NUM{ddr_valid}} & conf_mask;
                 abuf_wr_tail_en_r <= '0;
                 abuf_wr_addr_r    <= abuf_data_addr_r;
             end
             2'b01: begin
                 abuf_wr_data_en_r <= '0;
-                abuf_wr_tail_en_r <= {PE_NUM(ddr_valid)} & conf_mask;
+                abuf_wr_tail_en_r <= {PE_NUM{ddr_valid}} & conf_mask;
                 abuf_wr_addr_r    <= abuf_tail_addr_r;
             end
             default: begin
@@ -214,13 +215,13 @@ module ddr2abuf#(
             case(conf_trans_type)
             2'b10: begin
                 bbuf_wr_addr_r      <= bbuf_data_addr_r;
-                bbuf_wr_data_en_r   <= {PE_NUM(ddr_valid)} & conf_mask;
+                bbuf_wr_data_en_r   <= {PE_NUM{ddr_valid}} & conf_mask;
                 bbuf_wr_tail_en_r   <= 0;
             end
             2'b11: begin
                 bbuf_wr_addr_r      <= bbuf_tail_addr_r;
                 bbuf_wr_data_en_r   <= 0;
-                bbuf_wr_tail_en_r   <= {PE_NUM(ddr_valid)} & conf_mask;
+                bbuf_wr_tail_en_r   <= {PE_NUM{ddr_valid}} & conf_mask;
             end
             default: begin
                 bbuf_wr_addr_r      <= 0;

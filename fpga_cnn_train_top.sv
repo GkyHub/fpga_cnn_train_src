@@ -1,4 +1,5 @@
 import  GLOBAL_PARAM::*;
+import  INS_CONST::*;
 
 module fpga_cnn_train_top#(
     parameter   PE_NUM  = 32
@@ -17,7 +18,7 @@ module fpga_cnn_train_top#(
     output  [DDR_ADDR_W -1 : 0] ddr1_in_addr,
     output  [BURST_W    -1 : 0] ddr1_in_size,
     output                      ddr1_in_addr_valid,
-    input                       ddr1_in_addr_ready
+    input                       ddr1_in_addr_ready,
     
     input   [DDR_W      -1 : 0] ddr2_in_data,
     input                       ddr2_in_valid,
@@ -35,7 +36,7 @@ module fpga_cnn_train_top#(
     output  [DDR_ADDR_W -1 : 0] ddr1_out_addr,
     output  [BURST_W    -1 : 0] ddr1_out_size,
     output                      ddr1_out_addr_valid,
-    input                       ddr1_out_addr_ready
+    input                       ddr1_out_addr_ready,
                                      
     input   [DDR_W      -1 : 0] ddr2_out_data,
     input                       ddr2_out_valid,
@@ -49,6 +50,7 @@ module fpga_cnn_train_top#(
     
     localparam BUF_DEPTH = 256;
     localparam IDX_DEPTH = 256;
+    localparam ADDR_W    = bw(BUF_DEPTH);
     
     wire    [4      -1 : 0] layer_type;
     wire    [8      -1 : 0] image_width;
@@ -179,26 +181,25 @@ module fpga_cnn_train_top#(
         .IDX_DEPTH  (IDX_DEPTH  ),
         .PE_NUM     (PE_NUM     )
     ) pe_array_inst (
-        .clk    (clk    ),
-        .rst    (rst    ),
+        .clk        (clk        ),
+        .rst        (rst        ),
     
-    // PE control interface
-    input   [PE_NUM -1 : 0] switch_d,
-    input   [PE_NUM -1 : 0] switch_p,
-    input   [PE_NUM -1 : 0] switch_i,
-    input   [PE_NUM -1 : 0] switch_a,
-    input                   switch_b,
+        .switch_d   (switch_d   ),
+        .switch_p   (switch_p   ),
+        .switch_i   (switch_i   ),
+        .switch_a   (switch_a   ),
+        .switch_b   (switch_b   ),
     
-    input   [PE_NUM -1 : 0] start,
-    output  [PE_NUM -1 : 0] done,
-    input   [3      -1 : 0] mode,
-    input   [8      -1 : 0] idx_cnt,  
-    input   [8      -1 : 0] trip_cnt, 
-    input                   is_new,
-    input   [4      -1 : 0] pad_code, 
-    input                   cut_y,
+        .start      (start      ),
+        .done       (done       ),
+        .mode       (mode       ),
+        .idx_cnt    (idx_cnt    ),  
+        .trip_cnt   (trip_cnt   ), 
+        .is_new     (is_new     ),
+        .pad_code   (pad_code   ), 
+        .cut_y      (cut_y      ),
     
-    input   [bw(PE_NUM / 4) -1 : 0] rd_sel,
+        .rd_sel     (rd_sel     ),
     
         .idx_wr_data    (idx_wr_data        ),
         .idx_wr_addr    (idx_wr_addr        ),
@@ -235,6 +236,11 @@ module fpga_cnn_train_top#(
         .bbuf_rd_addr   (bbuf_rd_addr       ),
         .bbuf_rd_data   (bbuf_rd_data       )
     );
+    
+    // only for test
+    assign  ins_ready = ddr2pe_ins_ready;
+    assign  ddr2pe_ins_valid = ins_valid;
+    assign  ddr2pe_ins = ins;
     
     
 endmodule

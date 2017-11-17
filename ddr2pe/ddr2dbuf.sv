@@ -1,3 +1,5 @@
+import  GLOBAL_PARAM::DATA_W;
+import  GLOBAL_PARAM::BATCH;
 import  GLOBAL_PARAM::DDR_W;
 import  GLOBAL_PARAM::bw;
 
@@ -144,7 +146,7 @@ module ddr2dbuf#(
     end
 
     always @ (posedge clk) begin
-        if (mode[2:1] == 2'b01) begin
+        if (conf_mode[2:1] == 2'b01) begin
             dbuf_wr_addr_r <= conv_addr;
         end
         else begin
@@ -158,7 +160,7 @@ module ddr2dbuf#(
             for (i = 0; i < BATCH; i = i + 1) begin: ARRAY
             
                 always @ (posedge clk) begin
-                    if (mode[2:1] == 2'b01) begin
+                    if (conf_mode[2:1] == 2'b01) begin
                         if (conf_depool) begin
                             dbuf_wr_data_r[j][i] <= ddr2_data_d[i][j] ? ddr1_data_d[j][i] : '0;
                         end
@@ -182,7 +184,7 @@ module ddr2dbuf#(
                         dbuf_wr_en_r[i*4+j] <= 1'b0;
                     end
                     else if (conf_mask[i*4+j]) begin
-                        else if (conf_mode[2:1] == 2'b10) begin
+                        if (conf_mode[2:1] == 2'b10) begin
                             if (conf_depool) begin
                                 dbuf_wr_en_r[i*4+j] <= ddr_valid_d;
                             end

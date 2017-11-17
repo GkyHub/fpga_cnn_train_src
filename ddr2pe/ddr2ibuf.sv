@@ -1,4 +1,5 @@
 import  GLOBAL_PARAM::DDR_W;
+import  GLOBAL_PARAM::IDX_W;
 import  GLOBAL_PARAM::bw;
 
 module ddr2ibuf#(
@@ -70,9 +71,10 @@ module ddr2ibuf#(
     
     always @ (posedge clk) begin
         if (conf_mode[2:1] != 2'b01) begin
-            idx_wr_data = ddr_data_arr[batch_cnt_r];
+            idx_wr_data_r = ddr_data_arr[batch_cnt_r];
+        end
         else begin
-            idx_wr_data = {ddr_data_arr[batch_cnt_r][IDX_W  -1 :     0], 
+            idx_wr_data_r = {ddr_data_arr[batch_cnt_r][IDX_W  -1 :     0], 
                            ddr_data_arr[batch_cnt_r][IDX_W*2-1 : IDX_W]};
         end
     end
@@ -95,8 +97,8 @@ module ddr2ibuf#(
         end
     end
     
-    assign  idx_wr_en   <= idx_wr_en_r;
-    assign  idx_wr_data <= idx_wr_data_r;
-    assign  idx_wr_addr <= idx_wr_addr_r;
+    assign  idx_wr_en   = idx_wr_en_r;
+    assign  idx_wr_data = idx_wr_data_r;
+    assign  idx_wr_addr = idx_wr_addr_r;
     
 endmodule

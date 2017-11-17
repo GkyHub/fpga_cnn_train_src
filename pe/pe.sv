@@ -10,7 +10,8 @@ module pe#(
     parameter   GRP_ID_X    = 0,
     parameter   GRP_ID_Y    = 0,
     parameter   BUF_DEPTH   = 256,
-    parameter   IDX_DEPTH   = 256
+    parameter   IDX_DEPTH   = 256,
+    parameter   ADDR_W      = bw(BUF_DEPTH)
     )(
     input   clk,
     input   rst,
@@ -52,8 +53,6 @@ module pe#(
     input   [bw(BUF_DEPTH)  -1 : 0] abuf_rd_addr,
     output  [BATCH * RES_W  -1 : 0] abuf_rd_data
     );
-    
-    localparam ADDR_W   = 8;
     
 //=============================================================================
 // Address Generation Unit
@@ -247,7 +246,7 @@ module pe#(
     accum_buf#(
         .DEPTH      (BUF_DEPTH  ),
         .BATCH      (BATCH      ),
-        .RAM_TYPE   (RAM_TYPE   )
+        .RAM_TYPE   ("block"    )
     ) acc_buffer (
         .clk    (clk            ),
         .rst    (rst            ),

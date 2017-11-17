@@ -1,4 +1,5 @@
 import  GLOBAL_PARAM::DATA_W;
+import  GLOBAL_PARAM::TAIL_W;
 import  GLOBAL_PARAM::BATCH;
 import  GLOBAL_PARAM::RES_W;
 import  GLOBAL_PARAM::IDX_W;

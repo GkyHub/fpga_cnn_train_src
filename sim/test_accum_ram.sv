@@ -1,15 +1,18 @@
-import GLB_PARAM::*;
+`timescale 1ns/1ns
+
+import GLOBAL_PARAM::*;
 
 module test_accum_ram;
     
     localparam  DEPTH = 256;
-    localparam  BATCH = 32;
+    localparam  ADDR_W= 8;
     
     reg     clk, rst;
     
     always #5 clk <= ~clk;
     
     initial begin
+        clk <= 1'b1;
         rst <= 1'b1;
         #100
         rst <= 1'b0;
@@ -53,8 +56,7 @@ module test_accum_ram;
     end
     
     accum_buf#(
-        .DEPTH(DEPTH),
-        .BATCH(BATCH)
+        .DEPTH(DEPTH)
     ) uut (
         .clk,
         .rst,
@@ -68,13 +70,13 @@ module test_accum_ram;
         .accum_data,
     
         // load intermediate result port
-        .ld_wr_addr (       ),
-        .ld_wr_data (       ),
-        .ld_wr_en   (       ),
+        .wr_addr (       ),
+        .wr_data (       ),
+        .wr_en   (       ),
     
         // store result port
-        .sv_rd_addr (       ),
-        .sv_rd_data (       )
+        .rd_addr (       ),
+        .rd_data (       )
     );
     
 endmodule

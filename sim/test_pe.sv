@@ -1,4 +1,6 @@
-import GLB_PARAM::*;
+`timescale 1ns/1ns
+
+import GLOBAL_PARAM::*;
 
 module test_pe;
 
@@ -12,6 +14,7 @@ module test_pe;
     always #5 clk <= ~clk;
     
     initial begin
+        clk <= 1'b1;
         rst <= 1'b1;
         #100
         rst <= 1'b0;
@@ -25,6 +28,10 @@ module test_pe;
     reg                 is_new;
     reg     [4  -1 : 0] pad_code; 
     reg                 cut_y;
+    
+    reg     [8  -1 : 0] idx_wr_data;
+    reg     [8  -1 : 0] idx_wr_addr;
+    reg                 idx_wr_en;
 
     pe#(
         .GRP_ID_X   (GRP_ID_X   ),
@@ -49,12 +56,12 @@ module test_pe;
         .pad_code   (pad_code   ), 
         .cut_y      (cut_y      ),
     
-        .share_data_in  (0      ),
+        .share_data_in  (1024'd0      ),
         .share_data_out (),
     
-        .idx_wr_data    (),
-        .idx_wr_addr    (),
-        .idx_wr_en      (),
+        .idx_wr_data    (idx_wr_data    ),
+        .idx_wr_addr    (idx_wr_addr    ),
+        .idx_wr_en      (idx_wr_en      ),
     
         .dbuf_wr_addr   (),
         .dbuf_wr_data   (),
@@ -74,6 +81,7 @@ module test_pe;
     initial begin
         start <= 0;
         wait(~rst);
+        init_index;
         @(posedge clk);
         start   <= 1'b1;
         mode    <= 2'b00;
@@ -82,6 +90,29 @@ module test_pe;
         is_new  <= 1'b1;
         pad_code<= 4'b0000;
         cut_y   <= 1'b0;
+        @(posedge clk);
+        start   <= 1'b0;
     end
+    
+    task init_index;
+        automatic int i = 0;
+        reg [3 : 0] idx_x, idx_y;
+        
+        @(posedge clk);
+        idx_wr_en   <= 1'b0;
+        
+        for (i = 0; i < 16; i = i + 1) begin
+            idx_x = i;
+            idx_y = 16 - i;
+            @(posedge clk);
+            idx_wr_data <= {idx_y, idx_x};
+            idx_wr_addr <= i;
+            idx_wr_en   <= 1'b1;
+        end
+        
+        @(posedge clk);
+        idx_wr_en <= 1'b0;
+        
+    endtask
 
 endmodule

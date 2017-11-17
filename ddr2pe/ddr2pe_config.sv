@@ -145,7 +145,7 @@ module ddr2pe_config#(
             dbuf_conf_pix_num_r <= 0;
             dbuf_conf_mask_r    <= '0;
         end
-        else if (ins_valid && ins_ready && (opcode == RD_OP_D || opcode == RD_OP_G) begin
+        else if (ins_valid && ins_ready && (opcode == RD_OP_D || opcode == RD_OP_G)) begin
             dbuf_start_r        <= 1'b1;
             dbuf_conf_mode_r    <= layer_type;
             dbuf_conf_ch_num_r  <= size;
@@ -171,7 +171,7 @@ module ddr2pe_config#(
             pbuf_conf_mask_r        <= 0;
         end
         else if (ins_valid && ins_ready && 
-            (((opcode == RD_OP_W)  && (layer_type[2:1] == 2'b10)) || 
+            (((opcode == RD_OP_D)  && (layer_type[2:1] == 2'b10)) || 
              ((opcode == RD_OP_DW) && (layer_type[2:1] != 2'b10)))) begin
             pbuf_start_r            <= 1'b1;
             pbuf_conf_trans_num_r   <= size;
@@ -196,8 +196,7 @@ module ddr2pe_config#(
             abuf_conf_mask_r        <= '0;
         end
         else if (ins_valid && ins_ready && layer_type[2:1] == 2'b10 &&
-            ((opcode == RD_OP_DW) || (opcode == RD_OP_DB) ||
-             (opcode == RD_OP_TW) || (opcode == RD_OP_TB)) begin
+            (opcode != RD_OP_D) && (opcode != RD_OP_G)) begin
             abuf_start_r            <= 1'b1;
             abuf_conf_trans_type_r  <= layer_type;
             abuf_conf_trans_num_r   <= size;
@@ -256,7 +255,7 @@ module ddr2pe_config#(
                 ddr1_step_r     <= (pix_num * image_width) << 5;
                 ddr1_burst_num_r<= row_num;
             end
-            else if (opcdoe[3:2] == 2'b01) begin
+            else if (opcode[3:2] == 2'b01) begin
                 ddr2_start_r    <= 1'b1;
                 ddr2_st_addr_r  <= st_addr;
                 ddr2_burst_r    <= size;
@@ -328,7 +327,7 @@ module ddr2pe_config#(
         end
         else begin
             case(config_stat_r)
-            STAT_IDLE: config_stat_r <= (ins_valid && ins_ready) ? STAT_CONFIG : STAT_WORK;
+            STAT_IDLE: config_stat_r <= (ins_valid && ins_ready) ? STAT_CONF : STAT_WORK;
             STAT_CONF: config_stat_r <= STAT_WORK;
             STAT_WORK: config_stat_r <= (&all_done) ? STAT_IDLE : STAT_WORK;
             endcase
@@ -362,7 +361,7 @@ module ddr2pe_config#(
             ddr1_ready_mux_r <= 1'b0;
         end
         else if (dbuf_start_r) begin
-            ddr1_ready_mux_r <= 1'b0
+            ddr1_ready_mux_r <= 1'b0;
         end
         else if (pbuf_start_r) begin
             ddr1_ready_mux_r <= 1'b1;
