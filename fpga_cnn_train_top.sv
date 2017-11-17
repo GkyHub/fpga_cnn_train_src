@@ -52,9 +52,9 @@ module fpga_cnn_train_top#(
     localparam IDX_DEPTH = 256;
     localparam ADDR_W    = bw(BUF_DEPTH);
     
-    wire    [4      -1 : 0] layer_type;
-    wire    [8      -1 : 0] image_width;
-    wire    [4      -1 : 0] in_ch_seg;
+    wire    [4      -1 : 0] layer_type  = LT_F_CONV;
+    wire    [8      -1 : 0] image_width = 16;
+    wire    [4      -1 : 0] in_ch_seg   = 8;
     
     wire                    ddr2pe_ins_valid;
     wire                    ddr2pe_ins_ready;

@@ -97,6 +97,21 @@ module ddr2ibuf#(
         end
     end
     
+    // done signal
+    reg     done_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            done_r <= 1'b1;
+        end
+        else if (start) begin
+            done_r <= 1'b0;
+        end
+        else if (idx_cnt_r == conf_idx_num && ddr_valid) begin
+            done_r <= 1'b1;
+        end
+    end
+    
     assign  idx_wr_en   = idx_wr_en_r;
     assign  idx_wr_data = idx_wr_data_r;
     assign  idx_wr_addr = idx_wr_addr_r;

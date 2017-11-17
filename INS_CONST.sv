@@ -23,7 +23,8 @@ package INS_CONST;
     localparam LT_U_CONV    = 4'b0100;
     localparam LT_U_FC      = 4'b0101;
     
-    // load instruction opcode
+    
+    // load instruction format
     // [63:62] instruction type: 2'b00
     // [61:58] opcode
     // [57:52] buf_id

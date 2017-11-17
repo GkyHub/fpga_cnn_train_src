@@ -48,7 +48,7 @@ module pe_array#(
     input   [BATCH * DATA_W -1 : 0] abuf_wr_data,
     input   [PE_NUM         -1 : 0] abuf_wr_data_en,
     input   [BATCH * TAIL_W -1 : 0] abuf_wr_tail,
-    input   [PE_NUM         -1 : 0] abuf_wr_tail_en,     
+    input   [PE_NUM         -1 : 0] abuf_wr_tail_en,
     input   [ADDR_W         -1 : 0] abuf_rd_addr,
     output  [3 : 0][BATCH * RES_W  -1 : 0] abuf_rd_data,
     

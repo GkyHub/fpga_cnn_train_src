@@ -250,6 +250,18 @@ module ddr2pbuf#(
     
     RPipe#(.DW(1), .L(6)) acc_en_q (.clk, .rst, .s(bbuf_acc_valid), .d(bbuf_acc_en));
     
+    reg     [ADDR_W -1 : 0] bbuf_acc_addr_r;
+    always @ (posedge clk) begin
+        if (start) begin
+            bbuf_acc_addr_r <= 0;
+        end
+        else if (bbuf_acc_en) begin
+            bbuf_acc_addr_r <= bbuf_acc_addr_r + 1;
+        end
+    end
+    
+    assign  bbuf_acc_addr = bbuf_acc_addr_r;
+    
 //=============================================================================
 // done signal
 //=============================================================================
