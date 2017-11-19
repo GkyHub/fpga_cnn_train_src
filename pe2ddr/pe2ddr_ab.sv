@@ -44,6 +44,7 @@ module pe2ddr_ab#(
     reg     [3      -1 : 0] abuf_pack_cnt_r;
     
     reg     abuf_rd_valid_r;
+    wire    abuf_rd_valid_d;
     
     always @ (posedge clk) begin
         if (start) begin
@@ -68,10 +69,10 @@ module pe2ddr_ab#(
     always @ (posedge clk) begin
         if (ddr2_ready) begin
             if (conf_trans_type[0]) begin
-                abuf_addr_r <= abuf_data_addr_r;
+                abuf_addr_r <= abuf_tail_addr_r;
             end
             else begin
-                abuf_addr_r <= abuf_tail_addr_r;
+                abuf_addr_r <= abuf_data_addr_r;
             end
         end
     end
@@ -80,10 +81,21 @@ module pe2ddr_ab#(
         if (rst) begin
             abuf_rd_valid_r <= 1'b0;
         end
-        else begin
-        
+        else if (start) begin
+            abuf_rd_valid_r <= 1'b0;
+        end
+        else if (ddr2_ready) begin
+            if (abuf_addr_r == conf_trans_num) begin
+                abuf_rd_valid_r <= 1'b0;
+            end
+            else begin 
+                abuf_rd_valid_r <= 1'b1;
+            end
         end
     end
+    
+    PipeEn#(.DW(1), .L(7)) abuf_valid_pipe (.clk(clk), .clk_en(ddr2_ready),
+        .s(abuf_rd_valid_r), .d(abuf_rd_valid_d));
     
 //=============================================================================
 // bbuf_rd_addr
@@ -94,7 +106,9 @@ module pe2ddr_ab#(
     
     reg     [6      -1 : 0] bbuf_tail_cnt_r;
     reg     [6      -1 : 0] bbuf_data_cnt_r;
-    reg     [ADDR_W -1 : 0] bbuf_addr_r; 
+    reg     [ADDR_W -1 : 0] bbuf_addr_r;
+
+    reg     bbuf_rd_valid_r, bbuf_rd_valid_d;
     
     always @ (posedge clk) begin
         if (start) begin
@@ -122,6 +136,31 @@ module pe2ddr_ab#(
             bbuf_addr_r<= (bbuf_addr_r == conf_trans_size) ? bbuf_addr_r : (bbuf_addr_r + 1);
         end
     end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            bbuf_rd_valid_r <= 1'b0;
+        end
+        else if (start) begin
+            bbuf_rd_valid_r <= 1'b0;
+        end
+        else if (ddr2_ready) begin
+            if (bbuf_addr_r == conf_trans_num) begin
+                bbuf_rd_valid_r <= 1'b0;
+            end
+            else begin 
+                if (conf_trans_type[0]) begin
+                    bbuf_rd_valid_r <= (bbuf_tail_cnt_r == TPACK_SIZE - 2) || (bbuf_addr_r == conf_trans_num - 1);
+                end
+                else begin
+                    bbuf_rd_valid_r <= (bbuf_data_cnt_r == DPACK_SIZE - 2) || (bbuf_addr_r == conf_trans_num - 1);
+                end
+            end
+        end
+    end
+    
+    PipeEn#(.DW(1), .L(7)) bbuf_valid_pipe (.clk(clk), .clk_en(ddr2_ready),
+        .s(bbuf_rd_valid_r), .d(bbuf_rd_valid_d));
     
     assign  bbuf_rd_addr = bbuf_addr_r;
 
@@ -184,7 +223,10 @@ module pe2ddr_ab#(
     end
     
     reg     [DDR_W  -1 : 0] ddr2_data_r;
+    reg     ddr_valid_r;
+    
     assign  ddr2_data = ddr2_data_r;
+    assign  ddr2_valid = ddr2_valid_r;
     
     always @ (posedge clk) begin
         if (ddr2_ready) begin
@@ -194,6 +236,17 @@ module pe2ddr_ab#(
             2'b10: ddr2_data_r <= bbuf_data_arr_r;
             2'b11: ddr2_data_r <= bbuf_tail_arr_r;
             endcase
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (ddr2_ready) begin
+            if (conf_trans_type[1]) begin
+                ddr2_valid_r <= bbuf_rd_valid_d;
+            end
+            else begin
+                ddr2_valid_r <= abuf_rd_valid_d;
+            end
         end
     end
     

@@ -55,9 +55,9 @@ package INS_CONST;
     // [57:52] buf_id
     // [31: 0] ddr address
     localparam WR_OP_D      = 4'b0000;
-    localparam WR_OP_W      = 4'b0010;
-    localparam WR_OP_B      = 4'b0011;
-    localparam WR_OP_TW     = 4'b0100;
-    localparam WR_OP_TB     = 4'b0101;
+    localparam WR_OP_W      = 4'b1000;
+    localparam WR_OP_B      = 4'b1010;
+    localparam WR_OP_TW     = 4'b1001;
+    localparam WR_OP_TB     = 4'b1011;
     
 endpackage

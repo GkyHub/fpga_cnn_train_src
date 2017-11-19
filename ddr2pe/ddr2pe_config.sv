@@ -473,6 +473,6 @@ module ddr2pe_config#(
     assign dbuf_ddr_sel = dbuf_ddr_sel_r;
     assign ibuf_ddr_sel = ibuf_ddr_sel_r;
     assign pbuf_ddr_sel = pbuf_ddr_sel_r;
-    assign abuf_ddr_sel = abuf_ddr_sel_r;    
+    assign abuf_ddr_sel = abuf_ddr_sel_r;
     
 endmodule

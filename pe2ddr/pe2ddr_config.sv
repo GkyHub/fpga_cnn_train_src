@@ -30,6 +30,12 @@ module pe2ddr_config#(
     output  [5 : 0] dg_conf_shift,
     output  [1 : 0] dg_conf_pe_sel,
     
+    output          ab_start,
+    input           ab_done,
+    output  [1 : 0] ab_conf_trans_type,
+    output  [7 : 0] ab_conf_trans_num,
+    output  [1 : 0] ab_conf_grp_sel,
+    
     output                      ddr1_start,
     input                       ddr1_done,
     output  [DDR_ADDR_W -1 : 0] ddr1_st_addr,
@@ -51,6 +57,11 @@ module pe2ddr_config#(
     reg     [3 : 0] dg_conf_row_num_r;
     reg     [5 : 0] dg_conf_shift_r;
     reg     [1 : 0] dg_conf_pe_sel_r;
+    
+    reg             ab_start_r;
+    reg     [1 : 0] ab_conf_trans_type_r;
+    reg     [7 : 0] ab_conf_trans_num_r;
+    reg     [1 : 0] ab_conf_grp_sel_r;
     
     reg                         ddr1_start_r;
     reg     [DDR_ADDR_W -1 : 0] ddr1_st_addr_r;
@@ -98,6 +109,24 @@ module pe2ddr_config#(
     
     always @ (posedge clk) begin
         if (rst) begin
+            ab_start_r          <= 1'b0;
+            ab_conf_trans_type_r<= 2'b00;
+            ab_conf_trans_num_r <= 0;
+            ab_conf_grp_sel_r   <= 0; 
+        end
+        else if (ins_valid && ins_ready && !opcode[3]) begin
+            ab_start_r          <= 1'b1;
+            ab_conf_trans_type_r<= opcode[1:0];
+            ab_conf_trans_num_r <= size;
+            ab_conf_grp_sel_r   <= buf_id[1:0]; 
+        end
+        else begin
+            ab_start_r          <= 1'b0;
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
             ddr1_start_r        <= 1'b0;
             ddr1_st_addr_r      <= 0;
             ddr1_burst_r        <= 0;
@@ -125,19 +154,19 @@ module pe2ddr_config#(
             ddr2_burst_num_r    <= 0;
         end
         else if (ins_valid && ins_ready) begin
-            if (opcode == 4'b0000 && layer_type[2:1] == 2'b00) begin
+            if (!opcode[3] && layer_type[2:1] == 2'b00) begin
                 ddr2_start_r        <= 1'b1;
                 ddr2_st_addr_r      <= st_addr;
                 ddr2_burst_r        <= ((pix_num + 1) * out_ch_seg) << 5;
                 ddr2_step_r         <= ((pix_num + 1) * image_width) << 5; 
                 ddr2_burst_num_r    <= row_num;
             end
-            else if (opcode != 4'b0000) begin
+            else if (opcode[3]) begin
                 ddr2_start_r        <= 1'b1;
                 ddr2_st_addr_r      <= st_addr;
-                ddr2_burst_r        <= 
-                ddr2_step_r         <=  
-                ddr2_burst_num_r    <= 1;
+                ddr2_burst_r        <= layer_type[1] ? (size + 1) : ((size + 1) << 5);
+                ddr2_step_r         <= layer_type[1] ? (size + 1) : ((size + 1) << 5);
+                ddr2_burst_num_r    <= layer_type[0] ? 2 : 0;
             end
             else begin
                 ddr2_start_r        <= 1'b0;
@@ -187,5 +216,7 @@ module pe2ddr_config#(
     end
     
     assign  ins_ready = ready_r;
+    
+    
     
 endmodule
