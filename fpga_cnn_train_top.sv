@@ -31,18 +31,18 @@ module fpga_cnn_train_top#(
     output                      ddr2_in_addr_valid,
     input                       ddr2_in_addr_ready,
     
-    input   [DDR_W      -1 : 0] ddr1_out_data,
-    input                       ddr1_out_valid,
-    output                      ddr1_out_ready,
+    output  [DDR_W      -1 : 0] ddr1_out_data,
+    output                      ddr1_out_valid,
+    input                       ddr1_out_ready,
                                      
     output  [DDR_ADDR_W -1 : 0] ddr1_out_addr,
     output  [BURST_W    -1 : 0] ddr1_out_size,
     output                      ddr1_out_addr_valid,
     input                       ddr1_out_addr_ready,
                                      
-    input   [DDR_W      -1 : 0] ddr2_out_data,
-    input                       ddr2_out_valid,
-    output                      ddr2_out_ready,
+    output  [DDR_W      -1 : 0] ddr2_out_data,
+    output                      ddr2_out_valid,
+    input                       ddr2_out_ready,
                                      
     output  [DDR_ADDR_W -1 : 0] ddr2_out_addr,
     output  [BURST_W    -1 : 0] ddr2_out_size,
