@@ -60,19 +60,6 @@ module ddr2abuf#(
     end
     
     always @ (posedge clk) begin
-        abuf_next_pack_r <= ddr_valid && (conf_trans_type == 2'b01) && (abuf_pack_cnt_r == TD_RATE - 1);
-    end
-    
-    always @ (posedge clk) begin
-        if (start) begin
-            abuf_tail_addr_r <= 0;
-        end
-        else if (abuf_next_pack_r) begin
-            abuf_tail_addr_r <= abuf_tail_addr_r + 1;
-        end
-    end
-    
-    always @ (posedge clk) begin
         if (ddr_valid && conf_trans_type == 2'b01) begin
             abuf_tail_buf_r[abuf_pack_cnt_r] <= ddr_data;
         end

@@ -2,7 +2,7 @@ import  GLOBAL_PARAM::DDR_W;
 import  GLOBAL_PARAM::RES_W;
 import  GLOBAL_PARAM::DATA_W;
 
-module ddr2pe_dg#(
+module pe2ddr_dg#(
     parameter   BUF_DEPTH   = 256,
     parameter   ADDR_W      = bw(BUF_DEPTH)
     )(
@@ -18,6 +18,7 @@ module ddr2pe_dg#(
     input   [3 : 0] conf_pix_num,
     input   [3 : 0] conf_row_num,
     input   [5 : 0] conf_shift,
+    input   [1 : 0] conf_pe_sel,
     
     output  [ADDR_W         -1 : 0] abuf_rd_addr,
     input   [3 : 0][BATCH * RES_W  -1 : 0] abuf_rd_data,
@@ -75,8 +76,8 @@ module ddr2pe_dg#(
     
     always @ (posedge clk) begin
         if (start) begin
-            pix_cnt_r <= 0;
-            row_cnt_r <= 0;
+            pix_cnt_r <= {3'd0, conf_pe_sel[0]};
+            row_cnt_r <= {3'd0, conf_pe_sel[1]};
         end
         else if (ddr_ready && nxt_pix_r) begin
             if (pix_cnt_r == conf_pix_num) begin

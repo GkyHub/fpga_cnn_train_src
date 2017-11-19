@@ -9,6 +9,8 @@ module pe2ddr#(
     input   rst,
     
     input   [4      -1 : 0] layer_type,
+    input   [4      -1 : 0] out_ch_seg,
+    input   [8      -1 : 0] img_width,
     input                   pooling,
     input                   relu,
     
@@ -42,11 +44,53 @@ module pe2ddr#(
     output                      ddr2_addr_valid,
     input                       ddr2_addr_ready
     );
+    
+    wire            dg_start;
+    wire            dg_done;
+    wire    [3 : 0] dg_conf_layer_type;
+    wire            dg_conf_pooling;
+    wire            dg_conf_relu;
+    wire    [3 : 0] dg_conf_pix_num;
+    wire    [3 : 0] dg_conf_row_num;
+    wire    [5 : 0] dg_conf_shift;
+    wire    [1 : 0] dg_conf_pe_sel;
 
 //=============================================================================
 // datapath
 //=============================================================================
+
+    pe2ddr_dg#(
+        .BUF_DEPTH  (BUF_DEPTH  )
+    ) ddr2pe_dg_inst (
+        .clk            (clk                ),
+        .rst            (rst                ),
     
+        .start          (dg_start           ),
+        .done           (dg_done            ),
+        .conf_layer_type(layer_type         ),
+        .conf_pooling   (pooling            ),
+        .conf_relu      (relu               ),
+        .conf_ch_num    (out_ch_seg         ),
+        .conf_pix_num   (dg_conf_pix_num    ),
+        .conf_row_num   (dg_conf_row_num    ),
+        .conf_shift     (dg_conf_shift      ),
+        .conf_pe_sel    (dg_conf_pe_sel     ),
+    
+        .abuf_rd_addr   (dg_abuf_rd_addr    ),
+        .abuf_rd_data   (abuf_rd_data       ),
+        .abuf_rd_en     (dg_abuf_rd_en      ),
+        
+        .bbuf_rd_addr   (dg_bbuf_rd_addr    ),
+        .bbuf_rd_data   (bbuf_rd_data       ),
+        
+        .ddr1_data      (ddr1_data          ),
+        .ddr1_valid     (ddr1_valid         ),
+        .ddr1_ready     (ddr1_ready         ),
+        
+        .ddr2_data      (dg_ddr2_data       ),
+        .ddr2_valid     (dg_ddr2_valid      ),
+        .ddr2_ready     (ddr2_ready         )
+    );
     
 //=============================================================================
 // DDR addr generators
