@@ -4,6 +4,7 @@ import  GLOBAL_PARAM::BATCH;
 import  GLOBAL_PARAM::RES_W;
 import  GLOBAL_PARAM::IDX_W;
 import  GLOBAL_PARAM::bw;
+import  INS_CONST::INST_W;
 
 module pe_array#(
     parameter   PE_NUM      = 32,
@@ -14,6 +15,9 @@ module pe_array#(
     input   clk,
     input   rst,
     
+    // layer type
+    input   [3 : 0] layer_type,
+    
     // PE control interface
     input   [PE_NUM -1 : 0] switch_d,   // switch the ping pong buffer data
     input   [PE_NUM -1 : 0] switch_p,   // switch the ping pong buffer param
@@ -21,14 +25,11 @@ module pe_array#(
     input   [PE_NUM -1 : 0] switch_a,   // switch the ping pong buffer accum
     input                   switch_b,
     
-    input   [PE_NUM -1 : 0] start,
+    input   [INST_W -1 : 0] ins,
+    output                  ins_ready,
+    input                   ins_valid,
+    
     output  [PE_NUM -1 : 0] done,
-    input   [3      -1 : 0] mode,
-    input   [8      -1 : 0] idx_cnt,  
-    input   [8      -1 : 0] trip_cnt, 
-    input                   is_new,
-    input   [4      -1 : 0] pad_code, 
-    input                   cut_y,
     
     input   [bw(PE_NUM / 4) -1 : 0] rd_sel,
     
@@ -66,6 +67,53 @@ module pe_array#(
     output  [RES_W  -1 : 0] bbuf_rd_data
     );
     
+//=============================================================================
+// receive instruction
+//=============================================================================
+
+    assign  ins_ready = 1'b1;
+
+    reg     [8      -1 : 0] idx_cnt_r;
+    reg     [8      -1 : 0] trip_cnt_r; 
+    reg                     is_new_r;
+    reg     [4      -1 : 0] pad_code_r; 
+    reg                     cut_y_r;
+
+    wire    [5 : 0] pe_id = ins[57:52];
+    
+    always @ (posedge clk) begin
+        if (ins_valid) begin
+            idx_cnt_r   <= ins[39:32];
+            trip_cnt_r  <= ins[47:40];
+            is_new_r    <= ins[58];
+            pad_code_r  <= ins[51:48];
+            cut_y_r     <= ins[59];
+        end
+    end
+    
+    reg     [PE_NUM -1 : 0] start_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            start_r <= '0;
+        end
+        else if (ins_valid) begin
+            if (layer_type[0]) begin
+                start_r <= 1 << pe_id;
+            end
+            else begin
+                start_r <= 15 << (pe_id << 2);
+            end
+        end
+        else begin
+            start_r <= '0;
+        end
+    end
+    
+//=============================================================================
+// pe array
+//=============================================================================
+    
     localparam GRP_NUM = PE_NUM / 4;
     
     wire    [GRP_NUM - 1 : 0][3 : 0][BATCH * RES_W - 1 : 0] grp_abuf_rd_data;
@@ -100,14 +148,14 @@ module pe_array#(
                     .switch_p   (switch_p[i*4+j]  ),
                     .switch_a   (switch_a[i*4+j]  ),
                 
-                    .start      (start[i*4+j]     ),
+                    .start      (start_r[i*4+j]   ),
                     .done       (done[i*4+j]      ),
-                    .mode       (mode                   ),
-                    .idx_cnt    (idx_cnt                ),  
-                    .trip_cnt   (trip_cnt               ), 
-                    .is_new     (is_new                 ),
-                    .pad_code   (pad_code               ), 
-                    .cut_y      (cut_y                  ),
+                    .mode       (layer_type       ),
+                    .idx_cnt    (idx_cnt_r        ),  
+                    .trip_cnt   (trip_cnt_r       ), 
+                    .is_new     (is_new_r         ),
+                    .pad_code   (pad_code_r       ), 
+                    .cut_y      (cut_y_r          ),
                     
                     .share_data_in  ({share_data[1-y][1-x],
                                       share_data[1-y][x  ],

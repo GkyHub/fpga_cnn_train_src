@@ -53,14 +53,14 @@ module ddr2abuf#(
             abuf_tail_addr_r<= 0;
             abuf_pack_cnt_r <= 0; 
         end
-        else if (ddr_valid) begin
+        else if (ddr_valid && conf_trans_type == 2'b01) begin
             abuf_tail_addr_r<= (abuf_pack_cnt_r == TD_RATE - 1) ? abuf_tail_addr_r + 1 : abuf_tail_addr_r;
             abuf_pack_cnt_r <= (abuf_pack_cnt_r == TD_RATE - 1) ? 0 : abuf_pack_cnt_r + 1;
         end
     end
     
     always @ (posedge clk) begin
-        abuf_next_pack_r <= ddr_valid && (abuf_pack_cnt_r == TD_RATE - 1);
+        abuf_next_pack_r <= ddr_valid && (conf_trans_type == 2'b01) && (abuf_pack_cnt_r == TD_RATE - 1);
     end
     
     always @ (posedge clk) begin
@@ -88,7 +88,7 @@ module ddr2abuf#(
         if (start) begin
             abuf_data_addr_r <= 0;
         end
-        else if (ddr_valid) begin
+        else if (ddr_valid && conf_trans_type == 2'b00) begin
             abuf_data_addr_r <= abuf_data_addr_r + 1;
         end
     end
@@ -114,7 +114,7 @@ module ddr2abuf#(
         if (start) begin
             bbuf_tail_cnt_r <= 0;
         end
-        else if (ddr_valid) begin
+        else if (ddr_valid && conf_trans_type == 2'b11) begin
             bbuf_tail_cnt_r <= (bbuf_tail_cnt_r == TPACK_SIZE - 1) ? 0 : bbuf_tail_cnt_r + 1;
         end
     end
@@ -127,7 +127,7 @@ module ddr2abuf#(
         if (start) begin
             bbuf_tail_addr_r <= 0;
         end
-        else if (ddr_valid) begin
+        else if (ddr_valid && conf_trans_type == 2'b11) begin
             bbuf_tail_addr_r <= bbuf_tail_addr_r + 1;
         end
     end
@@ -149,7 +149,7 @@ module ddr2abuf#(
         if (start) begin
             bbuf_data_cnt_r <= 0;
         end
-        else if (ddr_valid) begin
+        else if (ddr_valid && conf_trans_type == 2'b10) begin
             bbuf_data_cnt_r <= (bbuf_data_cnt_r == DPACK_SIZE - 1) ? 0 : bbuf_data_cnt_r + 1;
         end
     end
@@ -162,7 +162,7 @@ module ddr2abuf#(
         if (start) begin
             bbuf_data_addr_r <= 0;
         end
-        else if (ddr_valid) begin
+        else if (ddr_valid && conf_trans_type == 2'b10) begin
             bbuf_data_addr_r <= bbuf_data_addr_r + 1;
         end
     end
@@ -243,5 +243,62 @@ module ddr2abuf#(
     assign  bbuf_wr_tail    = bbuf_tail_r;
     assign  bbuf_wr_data_en = bbuf_wr_data_en_r;
     assign  bbuf_wr_tail_en = bbuf_wr_tail_en_r;
+    
+    // done signal
+    reg     done_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            done_r <= 1'b1;
+        end
+        else if (start) begin
+            done_r <= 1'b0;
+        end
+        else if (ddr_valid) begin
+            case(conf_trans_type)
+            2'b00: begin
+                if (abuf_data_addr_r == conf_trans_num) begin
+                    done_r <= 1'b1;
+                end
+            end
+            2'b01: begin
+                if (abuf_tail_addr_r == conf_trans_num) begin
+                    done_r <= 1'b1;
+                end
+            end
+            2'b10: begin
+                if (bbuf_data_addr_r == conf_trans_num) begin
+                    done_r <= 1'b1;
+                end
+            end
+            2'b11: begin
+                if (bbuf_tail_addr_r == conf_trans_num) begin
+                    done_r <= 1'b1;
+                end
+            end
+            endcase
+        end
+    end
+    
+    assign  done = done_r;
+    
+    // ready signal
+    reg     ddr_ready_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            ddr_ready_r <= 1'b1;
+        end
+        else begin
+            case(conf_trans_type)
+            2'b00: ddr_ready_r <= 1'b1;
+            2'b01: ddr_ready_r <= 1'b1;
+            2'b10: ddr_ready_r <= (bbuf_data_cnt_r == DPACK_SIZE - 1) || (bbuf_data_addr_r == conf_trans_num);
+            2'b11: ddr_ready_r <= (bbuf_tail_cnt_r == TPACK_SIZE - 1) || (bbuf_tail_addr_r == conf_trans_num);
+            endcase
+        end
+    end
+    
+    assign  ddr_ready = ddr_ready_r;
     
 endmodule

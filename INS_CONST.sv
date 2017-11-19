@@ -5,7 +5,8 @@ package INS_CONST;
     // configuration instruction
     // [63:62] instruction type: 2'b11
     // [61:58] layer type
-    // [57:56] null
+    // [57:57] pooling/depool
+    // [56:56] relu
     // [55:52] input channel segment
     // [51:48] output channel segment
     // [47:40] input image width (for data arrangment in ddr)
@@ -39,7 +40,20 @@ package INS_CONST;
     localparam RD_OP_TB     = 4'b0111;  // bias LSB
     // localparam RD_OP_I      = 4'b1000;  // read index when read RD_OP_DW
     
+    // calc instruction
+    // [63:62] instruction type: 2'b01
+    // [59:59] cut_y
+    // [58:58] is_new
+    // [57:52] pe_id
+    // [51:48] pad_code
+    // [47:40] pix_num
+    // [39:32] index num
+    
     // save instruction opcode
+    // [63:62] instruction type: 2'b10
+    // [61:58] opcode
+    // [57:52] buf_id
+    // [31: 0] ddr address
     localparam WR_OP_D      = 4'b0000;
     localparam WR_OP_W      = 4'b0010;
     localparam WR_OP_B      = 4'b0011;

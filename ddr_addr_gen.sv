@@ -58,7 +58,7 @@ module ddr_addr_gen#(
         else if (start) begin
             ddr_addr_valid_r <= 1'b1;
         end
-        else if (burst_cnt_r >= burst_num_r) begin
+        else if (burst_cnt_r == burst_num_r && ddr_addr_ready) begin
             ddr_addr_valid_r <= 1'b0;
         end
     end

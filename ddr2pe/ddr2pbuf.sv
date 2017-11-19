@@ -43,6 +43,9 @@ module ddr2pbuf#(
     input   [ADDR_W -1 : 0] bbuf_acc_addr,
     input   [RES_W  -1 : 0] bbuf_acc_data
     );
+    
+    assign  ddr1_ready = 1'b1;
+    assign  ddr2_ready = 1'b1;
 
 //=============================================================================
 // forward and backward mode

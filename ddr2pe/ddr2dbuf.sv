@@ -36,6 +36,9 @@ module ddr2dbuf#(
     output  [PE_NUM -1 : 0] dbuf_wr_en
     );
     
+    assign  ddr1_ready = (conf_mode[2:1] == 2'b01) ? ddr2_valid : 1'b1;
+    assign  ddr2_ready = (conf_mode[2:1] == 2'b01) ? ddr1_valid : 1'b1;
+    
 //=============================================================================
 // CONV mode
 //=============================================================================

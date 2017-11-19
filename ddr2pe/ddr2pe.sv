@@ -122,6 +122,11 @@ module ddr2pe#(
     wire            ddr1_ready_mux;
     wire    [1 : 0] ddr2_ready_mux;
     
+    wire    [1 : 0] dbuf_ddr_sel;
+    wire            ibuf_ddr_sel;
+    wire    [1 : 0] pbuf_ddr_sel;
+    wire            abuf_ddr_sel;
+    
     ddr2pe_config#(
         .PE_NUM (PE_NUM )
     ) ddr2pe_config_inst (
@@ -182,7 +187,12 @@ module ddr2pe#(
         .ddr2_burst_num (ddr2_burst_num ),
         
         .ddr1_ready_mux (ddr1_ready_mux ),
-        .ddr2_ready_mux (ddr2_ready_mux )
+        .ddr2_ready_mux (ddr2_ready_mux ),
+        
+        .dbuf_ddr_sel   (dbuf_ddr_sel   ),
+        .ibuf_ddr_sel   (ibuf_ddr_sel   ),
+        .pbuf_ddr_sel   (pbuf_ddr_sel   ),
+        .abuf_ddr_sel   (abuf_ddr_sel   )        
     );
     
     ddr2ibuf#(
@@ -198,7 +208,7 @@ module ddr2pe#(
         .conf_mask      (ibuf_conf_mask     ),
     
         .ddr_data       (ddr2_data          ),
-        .ddr_valid      (ddr2_valid         ),
+        .ddr_valid      (ddr2_valid && ibuf_ddr_sel),
         .ddr_ready      (ibuf_ddr2_ready    ),
     
         .idx_wr_data    (idx_wr_data        ),
@@ -222,11 +232,11 @@ module ddr2pe#(
         .conf_depool    (dbuf_conf_depool   ),
     
         .ddr1_data      (ddr1_data          ),
-        .ddr1_valid     (ddr1_valid         ),
+        .ddr1_valid     (ddr1_valid && dbuf_ddr_sel[0]),
         .ddr1_ready     (dbuf_ddr1_ready    ),
         
         .ddr2_data      (ddr2_data          ),
-        .ddr2_valid     (ddr2_valid         ),
+        .ddr2_valid     (ddr2_valid && dbuf_ddr_sel[1]),
         .ddr2_ready     (dbuf_ddr2_ready    ),
         
         .dbuf_wr_addr   (dbuf_wr_addr       ),
@@ -251,11 +261,11 @@ module ddr2pe#(
         .conf_mask      (pbuf_conf_mask     ),
     
         .ddr1_data      (ddr1_data          ),
-        .ddr1_valid     (ddr1_valid         ),
+        .ddr1_valid     (ddr1_valid && pbuf_ddr_sel[0]),
         .ddr1_ready     (pbuf_ddr1_ready    ),
         
         .ddr2_data      (ddr2_data          ),
-        .ddr2_valid     (ddr2_valid         ),
+        .ddr2_valid     (ddr2_valid && pbuf_ddr_sel[1]),
         .ddr2_ready     (pbuf_ddr2_ready    ),
         
         .pbuf_wr_addr   (pbuf_wr_addr       ),
@@ -283,7 +293,7 @@ module ddr2pe#(
     
         // ddr data stream port
         .ddr_data       (ddr2_data              ),
-        .ddr_valid      (ddr2_valid             ),
+        .ddr_valid      (ddr2_valid && abuf_ddr_sel),
         .ddr_ready      (abuf_ddr2_ready        ),
     
         // accum and bias buf port

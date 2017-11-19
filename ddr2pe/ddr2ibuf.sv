@@ -66,6 +66,8 @@ module ddr2ibuf#(
         end
     end
     
+    assign  ddr_ready = ddr_ready_r;
+    
     // data selection
     assign  ddr_data_arr = ddr_data;
     
@@ -111,6 +113,8 @@ module ddr2ibuf#(
             done_r <= 1'b1;
         end
     end
+    
+    assign  done = done_r;
     
     assign  idx_wr_en   = idx_wr_en_r;
     assign  idx_wr_data = idx_wr_data_r;

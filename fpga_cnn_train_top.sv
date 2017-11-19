@@ -11,6 +11,8 @@ module fpga_cnn_train_top#(
     output                  ins_ready,
     input   [INST_W -1 : 0] ins,
     
+    output                  working,
+    
     input   [DDR_W      -1 : 0] ddr1_in_data,
     input                       ddr1_in_valid,
     output                      ddr1_in_ready,
@@ -52,13 +54,17 @@ module fpga_cnn_train_top#(
     localparam IDX_DEPTH = 256;
     localparam ADDR_W    = bw(BUF_DEPTH);
     
-    wire    [4      -1 : 0] layer_type  = LT_F_CONV;
-    wire    [8      -1 : 0] image_width = 16;
-    wire    [4      -1 : 0] in_ch_seg   = 8;
-    
     wire                    ddr2pe_ins_valid;
     wire                    ddr2pe_ins_ready;
     wire    [INST_W -1 : 0] ddr2pe_ins;
+    
+    wire                    pe_ins_valid;
+    wire                    pe_ins_ready;
+    wire    [INST_W -1 : 0] pe_ins;
+    
+    wire                    pe2ddr_ins_valid;
+    wire                    pe2ddr_ins_ready;
+    wire    [INST_W -1 : 0] pe2ddr_ins;
     
     wire    [IDX_W*2        -1 : 0] idx_wr_data;
     wire    [bw(IDX_DEPTH)  -1 : 0] idx_wr_addr;
@@ -101,16 +107,60 @@ module fpga_cnn_train_top#(
     wire    [PE_NUM -1 : 0] switch_a;
     wire                    switch_b;
 
-    wire    [PE_NUM -1 : 0] start;
-    wire    [PE_NUM -1 : 0] done;
-    wire    [3      -1 : 0] mode;
-    wire    [8      -1 : 0] idx_cnt;  
-    wire    [8      -1 : 0] trip_cnt; 
-    wire                    is_new;
-    wire    [4      -1 : 0] pad_code; 
-    wire                    cut_y;
+    wire    [PE_NUM -1 : 0] pe_done;
 
     wire    [bw(PE_NUM / 4) -1 : 0] rd_sel;
+    
+    wire    [3 : 0] conf_layer_type;
+    wire    [3 : 0] conf_in_ch_seg;
+    wire    [3 : 0] conf_out_ch_seg;
+    wire    [7 : 0] conf_in_img_width;
+    wire    [7 : 0] conf_out_img_width;
+    wire            conf_pooling; 
+    wire            conf_relu;
+    wire            conf_depool;
+    
+    top_control#(
+        .PE_NUM (PE_NUM )
+    ) control_inst (
+        .clk    (clk    ),
+        .rst    (rst    ),
+
+        .ins_valid  (ins_valid  ),
+        .ins_ready  (ins_ready  ),
+        .ins        (ins        ),
+    
+        .working    (working    ),
+
+        .ddr2pe_ins_valid   (ddr2pe_ins_valid   ),
+        .ddr2pe_ins_ready   (ddr2pe_ins_ready   ),
+        .ddr2pe_ins         (ddr2pe_ins         ),
+
+        .pe_ins_valid       (pe_ins_valid       ),
+        .pe_ins_ready       (pe_ins_ready       ),
+        .pe_ins             (pe_ins             ),
+
+        .pe2ddr_ins_valid   (pe2ddr_ins_valid   ),
+        .pe2ddr_ins_ready   (pe2ddr_ins_ready   ),
+        .pe2ddr_ins         (pe2ddr_ins         ),
+    
+        .conf_layer_type    (conf_layer_type    ),
+        .conf_in_ch_seg     (conf_in_ch_seg     ),
+        .conf_out_ch_seg    (conf_out_ch_seg    ),
+        .conf_in_img_width  (conf_in_img_width  ),
+        .conf_out_img_width (conf_out_img_width ),
+        .conf_pooling       (conf_pooling       ), 
+        .conf_relu          (conf_relu          ),
+        .conf_depool        (conf_depool        ),
+    
+        .switch_d   (switch_d   ),
+        .switch_p   (switch_p   ),
+        .switch_i   (switch_i   ),
+        .switch_a   (switch_a   ),
+        .switch_b   (switch_b   ),
+
+        .pe_done    (pe_done    )
+    );
  
     ddr2pe#(
         .BUF_DEPTH  (BUF_DEPTH  ),
@@ -120,7 +170,7 @@ module fpga_cnn_train_top#(
         .clk    (clk    ),
         .rst    (rst    ),
     
-        .layer_type     (layer_type         ),
+        .layer_type     (conf_layer_type    ),
         .image_width    (image_width        ),
         .in_ch_seg      (in_ch_seg          ),
     
@@ -181,25 +231,23 @@ module fpga_cnn_train_top#(
         .IDX_DEPTH  (IDX_DEPTH  ),
         .PE_NUM     (PE_NUM     )
     ) pe_array_inst (
-        .clk        (clk        ),
-        .rst        (rst        ),
+        .clk        (clk            ),
+        .rst        (rst            ),
+        
+        .layer_type (conf_layer_type),
     
-        .switch_d   (switch_d   ),
-        .switch_p   (switch_p   ),
-        .switch_i   (switch_i   ),
-        .switch_a   (switch_a   ),
-        .switch_b   (switch_b   ),
+        .switch_d   (switch_d       ),
+        .switch_p   (switch_p       ),
+        .switch_i   (switch_i       ),
+        .switch_a   (switch_a       ),
+        .switch_b   (switch_b       ),
     
-        .start      (start      ),
-        .done       (done       ),
-        .mode       (mode       ),
-        .idx_cnt    (idx_cnt    ),  
-        .trip_cnt   (trip_cnt   ), 
-        .is_new     (is_new     ),
-        .pad_code   (pad_code   ), 
-        .cut_y      (cut_y      ),
+        .ins_valid  (pe_ins_valid   ),
+        .ins_ready  (pe_ins_ready   ),
+        .ins        (pe_ins         ),
+        .done       (pe_done        ),
     
-        .rd_sel     (rd_sel     ),
+        .rd_sel     (rd_sel         ),
     
         .idx_wr_data    (idx_wr_data        ),
         .idx_wr_addr    (idx_wr_addr        ),
@@ -236,11 +284,5 @@ module fpga_cnn_train_top#(
         .bbuf_rd_addr   (bbuf_rd_addr       ),
         .bbuf_rd_data   (bbuf_rd_data       )
     );
-    
-    // only for test
-    assign  ins_ready = ddr2pe_ins_ready;
-    assign  ddr2pe_ins_valid = ins_valid;
-    assign  ddr2pe_ins = ins;
-    
     
 endmodule
