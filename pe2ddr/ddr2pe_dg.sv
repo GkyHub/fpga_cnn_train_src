@@ -1,4 +1,10 @@
+import  GLOBAL_PARAM::DDR_W;
+import  GLOBAL_PARAM::RES_W;
+import  GLOBAL_PARAM::DATA_W;
+
 module ddr2pe_dg#(
+    parameter   BUF_DEPTH   = 256,
+    parameter   ADDR_W      = bw(BUF_DEPTH)
     )(
     input   clk,
     input   rst,
@@ -123,18 +129,20 @@ module ddr2pe_dg#(
     wire    [DATA_W -1 : 0] bias = bbuf_rd_data[RES_W-1 : RES_W-DATA_W];
     wire    [3 : 0][BATCH -1 : 0][RES_W -1 : 0] res_arr = abuf_rd_data;
     
-    reg     [BATCH -1 : 0][RES_W -1 : 0] res_sel_r;
-    reg     [BATCH -1 : 0][DATA_W-1 : 0] res_sf_r;
-    reg     [BATCH -1 : 0][DATA_W-1 : 0] res_bias_r;
-    reg     [BATCH -1 : 0][DATA_W-1 : 0] res_relu_r;
+    signed reg [BATCH -1 : 0][RES_W -1 : 0] res_sel_r;
+    signed reg [BATCH -1 : 0][DATA_W-1 : 0] res_sf_r;
+    signed reg [BATCH -1 : 0][DATA_W-1 : 0] res_bias_r;
+    signed reg [BATCH -1 : 0][DATA_W-1 : 0] res_relu_r;
     
     reg     [BATCH -1 : 0][3 : 0] pool_mask_r;
     reg     [BATCH -1 : 0][3 : 0] relu_mask_r;
     
-    wire    [1 : 0] grp_sel_d;
+    wire    [1 : 0] grp_mux_d;
+    
+    wire    [BATCH  -1 : 0][DATA_W  -1 : 0] ddr1_data_arr, ddr2_data_arr;
     
     PipeEn#(.DW(2), .L(5)) grp_mux_pipe (.clk(clk), .clk_en(ddr_ready), 
-        .s(grp_mux_r), .d(bbuf_rd_addr[3:0]);
+        .s(grp_mux_r), .d(grp_mux_d);
         
     genvar i;
     generate
@@ -144,27 +152,103 @@ module ddr2pe_dg#(
             
             signed reg  [1 : 0][RES_W  -1 : 0] pool_res1_r;
             signed reg  [RES_W  -1 : 0] pool_res2_r;
+            
+            reg     [4  -1 : 0] pool_mask1_r;
+            reg     [4  -1 : 0] pool_mask2_r;
+            
+            reg     [4  -1 : 0] pool_mask_d;
         
-            // pooling or mux
+            // pooling or mux data
             always @ (posedge clk) begin
                 if (ddr_ready) begin
+                    // step 1
                     if (pooling) begin
                         pool_res1_r[0] = (unit_res[0] > unit_res[1]) ? unit_res[0] : unit_res[1];
                         pool_res1_r[1] = (unit_res[2] > unit_res[3]) ? unit_res[2] : unit_res[3];
                     end
                     else begin
-                        pool_res1_r[0] = 
-                        pool_res1_r[1] = 
+                        pool_res1_r[0] = unit_res[grp_mux_d];
+                    end
+                    
+                    // step 2
+                    if (pooling) begin
+                        res_sel_r[i] = (pool_res1_r[0] > pool_res1_r[1]) pool_res1_r[0] : pool_res1_r[1];
+                    end
+                    else begin
+                        res_sel_r[i] = pool_res1_r[0];
                     end
                 end
             end
             
+            // pooling or mux mask
+            always @ (posedge clk) begin
+                if (ddr_ready) begin
+                    // step 1
+                    if (pooling) begin
+                        pool_mask1_r[0] <= (unit_res[0] > unit_res[1]);
+                        pool_mask1_r[1] <= !(unit_res[0] > unit_res[1]);
+                        pool_mask1_r[2] <= (unit_res[2] > unit_res[3]);
+                        pool_mask1_r[3] <= !(unit_res[2] > unit_res[3]);
+                    end
+                    
+                    // step 2
+                    if (pooling) begin
+                        pool_mask2_r[0] <= pool_mask1_r[0] && (pool_res1_r[0] > pool_res1_r[1]);
+                        pool_mask2_r[1] <= pool_mask1_r[1] && (pool_res1_r[0] > pool_res1_r[1]);
+                        pool_mask2_r[2] <= pool_mask1_r[2] && !(pool_res1_r[0] > pool_res1_r[1]);
+                        pool_mask2_r[3] <= pool_mask1_r[3] && !(pool_res1_r[0] > pool_res1_r[1]);
+                    end
+                    else begin
+                        pool_mask2_r[i] <= 4'b1111;
+                    end
+                end
+            end
+            
+            // shift
+            always @ (posedge clk) begin
+                if (ddr_ready) begin
+                    res_sf_r[i] <= res_sel_r[i] >> conf_shift;
+                end
+            end
+            
+            // bias
+            always @ (posedge clk) begin
+                if (ddr_ready && !conf_layer_type[1]) begin
+                    if (conf_layer_type[1]) begin
+                        res_bias_r[i] <= res_sf_r[i];
+                    end
+                    else begin                    
+                        res_bias_r[i] <= res_sf_r[i] + bias;
+                    end
+                end
+            end
+            
+            // delay pooling mask to sync with relu
+            PipeEn#(.DW(4), .L(2)) pool_mask_pipe(.clk(clk), .clk_en(ddr_ready), 
+                .s(pool_mask2_r), .d(pool_mask_d));
+            
+            // relu
+            always @ (posedge clk) begin
+                if (ddr_ready) begin
+                    res_relu_r[i] <= (res_relu_r[i] > 0) ? res_relu_r[i] : 0;
+                    relu_mask_r[i]<= (res_relu_r[i] > 0) ? pool_mask_d : 4'b0000;
+                end
+            end
+            
+            assign  ddr1_data_arr[i] = res_relu_r[i];
+            assign  ddr2_data_arr[i] = {4'b0000, relu_mask_r[i]};
+            
         end
     endgenerate
     
+    // valid signal delay
+    RPipeEn#(.DW(1), .L(12)) pool_mask_pipe(.clk(clk), .clk_en(ddr_ready), .s(valid_r), .d(ddr1_valid));
+    assign  ddr2_valid = ddr1_valid;
     
-
-
+    // output data
+    assign  ddr1_data = ddr1_data_arr;
+    assign  ddr2_data = ddr2_data_arr;
+    
 //=============================================================================
 // done signal   
 //=============================================================================
