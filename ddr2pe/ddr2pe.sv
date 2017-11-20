@@ -13,6 +13,7 @@ module ddr2pe#(
     input   [4      -1 : 0] layer_type,
     input   [8      -1 : 0] image_width,
     input   [4      -1 : 0] in_ch_seg,
+    input                   depool,
     
     input                   ins_valid,
     output                  ins_ready,
@@ -136,6 +137,7 @@ module ddr2pe#(
         .layer_type (layer_type ),
         .image_width(image_width),
         .in_ch_seg  (in_ch_seg  ),
+        .depool     (depool     ),
     
         .ins_valid  (ins_valid  ),
         .ins_ready  (ins_ready  ),

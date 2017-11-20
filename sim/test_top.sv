@@ -30,6 +30,8 @@ module test_top;
     wire                        ddr2_in_addr_valid;
     reg                         ddr2_in_addr_ready;
     
+    wire    working;
+    
     reg     clk, rst;
     
     always #5 clk <= ~clk;
@@ -50,6 +52,8 @@ module test_top;
         .ins_valid          (ins_valid          ),
         .ins_ready          (ins_ready          ),
         .ins                (ins                ),
+        
+        .workgin            (working            ),
                             
         .ddr1_in_data       (ddr1_in_data       ),
         .ddr1_in_valid      (ddr1_in_valid      ),

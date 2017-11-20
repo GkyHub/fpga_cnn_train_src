@@ -60,6 +60,9 @@ module pe2ddr#(
     wire    [ADDR_W -1 : 0] dg_bbuf_rd_addr;
     wire                    dg_bbuf_rd_en;
     
+    wire    [DDR_W  -1 : 0] dg_ddr2_data;
+    wire                    dg_ddr2_valid;
+    
     wire            ab_start;
     wire            ab_done;
     wire    [1 : 0] ab_conf_trans_type;
@@ -70,6 +73,10 @@ module pe2ddr#(
     wire                    ab_abuf_rd_en;
     wire    [ADDR_W -1 : 0] ab_bbuf_rd_addr;
     wire                    ab_bbuf_rd_en;
+    
+    wire    [DDR_W  -1 : 0] ab_ddr2_data;
+    wire                    ab_ddr2_valid;
+    
 
     wire    path_sel;
     
@@ -179,16 +186,16 @@ module pe2ddr#(
         .clk            (clk                ),
         .rst            (rst                ),
     
-        .start          (start              ),
-        .done           (done               ),
+        .start          (ab_start           ),
+        .done           (ab_done            ),
         .conf_layer_type(layer_type         ),
-        .conf_trans_type(conf_trans_type    ),
-        .conf_trans_num (conf_trans_num     ),
-        .conf_grp_sel   (conf_grp_sel       ),
+        .conf_trans_type(ab_conf_trans_type ),
+        .conf_trans_num (ab_conf_trans_num  ),
+        .conf_grp_sel   (ab_conf_grp_sel    ),
     
         .abuf_rd_addr   (ab_abuf_rd_addr    ),
         .abuf_rd_data   (abuf_rd_data       ),
-        .abuf_rd_en     (ab_abuf_rd_addr    ),
+        .abuf_rd_en     (ab_abuf_rd_en      ),
     
         .bbuf_rd_addr   (ab_bbuf_rd_addr    ),
         .bbuf_rd_data   (bbuf_rd_data       ),

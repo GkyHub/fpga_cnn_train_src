@@ -173,8 +173,9 @@ module fpga_cnn_train_top#(
         .rst            (rst                ),
     
         .layer_type     (conf_layer_type    ),
-        .image_width    (image_width        ),
-        .in_ch_seg      (in_ch_seg          ),
+        .image_width    (conf_in_img_width  ),
+        .in_ch_seg      (conf_in_ch_seg     ),
+        .depool         (conf_depool        ),
     
         .ins_valid      (ddr2pe_ins_valid   ),
         .ins_ready      (ddr2pe_ins_ready   ),
@@ -276,6 +277,7 @@ module fpga_cnn_train_top#(
         
         .abuf_rd_addr   (abuf_rd_addr       ),
         .abuf_rd_data   (abuf_rd_data       ),
+        .abuf_rd_en     (abuf_rd_en         ),
     
         .bbuf_wr_addr   (bbuf_wr_addr       ),
         .bbuf_wr_data   (bbuf_wr_data       ),
@@ -284,7 +286,8 @@ module fpga_cnn_train_top#(
         .bbuf_wr_tail_en(bbuf_wr_tail_en    ),
         
         .bbuf_rd_addr   (bbuf_rd_addr       ),
-        .bbuf_rd_data   (bbuf_rd_data       )
+        .bbuf_rd_data   (bbuf_rd_data       ),
+        .bbuf_rd_en     (bbuf_rd_en         )
     );
     
     pe2ddr#(

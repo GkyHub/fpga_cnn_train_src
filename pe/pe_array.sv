@@ -144,8 +144,8 @@ module pe_array#(
                     .BUF_DEPTH  (BUF_DEPTH  ),
                     .IDX_DEPTH  (IDX_DEPTH  )
                 ) pe_inst (
-                    .clk        (clk                    ),
-                    .rst        (rst                    ),
+                    .clk        (clk              ),
+                    .rst        (rst              ),
                 
                     .switch_i   (switch_i[i*4+j]  ),
                     .switch_d   (switch_d[i*4+j]  ),
@@ -154,7 +154,7 @@ module pe_array#(
                 
                     .start      (start_r[i*4+j]   ),
                     .done       (done[i*4+j]      ),
-                    .mode       (layer_type       ),
+                    .mode       (layer_type[2:0]  ),
                     .idx_cnt    (idx_cnt_r        ),  
                     .trip_cnt   (trip_cnt_r       ), 
                     .is_new     (is_new_r         ),

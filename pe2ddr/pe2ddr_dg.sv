@@ -141,7 +141,7 @@ module pe2ddr_dg#(
     wire    [BATCH  -1 : 0][DATA_W  -1 : 0] ddr1_data_arr, ddr2_data_arr;
     
     PipeEn#(.DW(2), .L(5)) grp_mux_pipe (.clk(clk), .clk_en(ddr_ready), 
-        .s(grp_mux_r), .d(grp_mux_d));
+        .s(grp_mux), .d(grp_mux_d));
         
     genvar i;
     generate
@@ -245,7 +245,8 @@ module pe2ddr_dg#(
     endgenerate
     
     // valid signal delay
-    RPipeEn#(.DW(1), .L(12)) pool_mask_pipe(.clk(clk), .clk_en(ddr_ready), .s(valid_r), .d(ddr1_valid));
+    RPipeEn#(.DW(1), .L(12)) pool_mask_pipe(.clk(clk), .rst(rst), 
+        .clk_en(ddr_ready), .s(valid_r), .d(ddr1_valid));
     assign  ddr2_valid = ddr1_valid;
     
     // output data
