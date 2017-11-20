@@ -175,7 +175,6 @@ module ddr2pe_config#(
             pbuf_conf_ch_num_r      <= 0;
             pbuf_conf_pix_num_r     <= 0;
             pbuf_conf_row_num_r     <= 0;
-            pbuf_conf_depool_r      <= 0;
             pbuf_conf_mask_r        <= 0;
         end
         else if (ins_valid && ins_ready && 

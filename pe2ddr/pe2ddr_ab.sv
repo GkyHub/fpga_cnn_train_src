@@ -1,6 +1,4 @@
-import  GLOBAL_PARAM::DDR_W;
-import  GLOBAL_PARAM::RES_W;
-import  GLOBAL_PARAM::DATA_W;
+import  GLOBAL_PARAM::*;
 
 module pe2ddr_ab#(
     parameter   BUF_DEPTH   = 256,
@@ -133,7 +131,7 @@ module pe2ddr_ab#(
             bbuf_addr_r<= 0;
         end
         else if (ddr2_ready) begin
-            bbuf_addr_r<= (bbuf_addr_r == conf_trans_size) ? bbuf_addr_r : (bbuf_addr_r + 1);
+            bbuf_addr_r<= (bbuf_addr_r == conf_trans_num) ? bbuf_addr_r : (bbuf_addr_r + 1);
         end
     end
     
@@ -173,11 +171,15 @@ module pe2ddr_ab#(
     genvar i;
     generate
         for (i = 0; i < BATCH; i = i + 1) begin: UNIT
-        
-            signed wire [3 : 0][RES_W  -1 : 0] unit_res = abuf_rd_data[3 : 0][i];
             
-            signed reg  [1 : 0][RES_W  -1 : 0] sum_r;
-            signed reg  [RES_W  -1 : 0] res_r;
+            wire signed [3 : 0][RES_W  -1 : 0] unit_res;
+            assign  unit_res[0] = abuf_rd_data[0][i];
+            assign  unit_res[1] = abuf_rd_data[1][i];
+            assign  unit_res[2] = abuf_rd_data[2][i];
+            assign  unit_res[3] = abuf_rd_data[3][i];
+                 
+            reg  signed [1 : 0][RES_W  -1 : 0] sum_r;
+            reg  signed [RES_W  -1 : 0] res_r;
             
             always @ (posedge clk) begin
                 if (ddr2_ready) begin
@@ -223,7 +225,7 @@ module pe2ddr_ab#(
     end
     
     reg     [DDR_W  -1 : 0] ddr2_data_r;
-    reg     ddr_valid_r;
+    reg     ddr2_valid_r;
     
     assign  ddr2_data = ddr2_data_r;
     assign  ddr2_valid = ddr2_valid_r;

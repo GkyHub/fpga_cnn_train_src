@@ -408,7 +408,7 @@ module top_control#(
         if (rst) begin
             working_r <= 1'b0;
         end
-        else if (ins_valid || !all_done) begin
+        else if (ins_valid || !all_done_r) begin
             working_r <= 1'b1;
         end
         else begin

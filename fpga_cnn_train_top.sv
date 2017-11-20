@@ -288,7 +288,8 @@ module fpga_cnn_train_top#(
     );
     
     pe2ddr#(
-        .BUF_DEPTH  (BUF_DEPTH  )
+        .BUF_DEPTH  (BUF_DEPTH  ),
+        .PE_NUM     (PE_NUM     )
     ) pe2ddr_inst (
         .clk            (clk                ),
         .rst            (rst                ),

@@ -1,6 +1,4 @@
-import  GLOBAL_PARAM::DDR_W;
-import  GLOBAL_PARAM::RES_W;
-import  GLOBAL_PARAM::DATA_W;
+import  GLOBAL_PARAM::*;
 
 module pe2ddr_dg#(
     parameter   BUF_DEPTH   = 256,
@@ -105,7 +103,7 @@ module pe2ddr_dg#(
         end
     end
 
-    assign grp_mux <= {row_cnt_r[0], pix_cnt_r[0]};
+    assign grp_mux = {row_cnt_r[0], pix_cnt_r[0]};
     
     always @ (posedge clk) begin
         if (rst) begin
@@ -120,7 +118,7 @@ module pe2ddr_dg#(
     end
     
     PipeEn#(.DW(4), .L(3)) bbuf_addr_pipe (.clk(clk), .clk_en(ddr_ready), 
-        .s(ch_cnt_d_r), .d(bbuf_rd_addr[3:0]);
+        .s(ch_cnt_d_r), .d(bbuf_rd_addr[3:0]));
     assign  bbuf_rd_addr[ADDR_W-1:4] = 0;
 
 //=============================================================================
@@ -130,10 +128,10 @@ module pe2ddr_dg#(
     wire    [DATA_W -1 : 0] bias = bbuf_rd_data[RES_W-1 : RES_W-DATA_W];
     wire    [3 : 0][BATCH -1 : 0][RES_W -1 : 0] res_arr = abuf_rd_data;
     
-    signed reg [BATCH -1 : 0][RES_W -1 : 0] res_sel_r;
-    signed reg [BATCH -1 : 0][DATA_W-1 : 0] res_sf_r;
-    signed reg [BATCH -1 : 0][DATA_W-1 : 0] res_bias_r;
-    signed reg [BATCH -1 : 0][DATA_W-1 : 0] res_relu_r;
+    reg signed [BATCH -1 : 0][RES_W -1 : 0] res_sel_r;
+    reg signed [BATCH -1 : 0][DATA_W-1 : 0] res_sf_r;
+    reg signed [BATCH -1 : 0][DATA_W-1 : 0] res_bias_r;
+    reg signed [BATCH -1 : 0][DATA_W-1 : 0] res_relu_r;
     
     reg     [BATCH -1 : 0][3 : 0] pool_mask_r;
     reg     [BATCH -1 : 0][3 : 0] relu_mask_r;
@@ -143,16 +141,20 @@ module pe2ddr_dg#(
     wire    [BATCH  -1 : 0][DATA_W  -1 : 0] ddr1_data_arr, ddr2_data_arr;
     
     PipeEn#(.DW(2), .L(5)) grp_mux_pipe (.clk(clk), .clk_en(ddr_ready), 
-        .s(grp_mux_r), .d(grp_mux_d);
+        .s(grp_mux_r), .d(grp_mux_d));
         
     genvar i;
     generate
         for (i = 0; i < BATCH; i = i + 1) begin: UNIT
             
-            signed wire [3 : 0][RES_W  -1 : 0] unit_res = res_arr[3 : 0][i];
-            
-            signed reg  [1 : 0][RES_W  -1 : 0] pool_res1_r;
-            signed reg  [RES_W  -1 : 0] pool_res2_r;
+            wire signed [3 : 0][RES_W  -1 : 0] unit_res;
+            assign  unit_res[0] = res_arr[0][i];
+            assign  unit_res[1] = res_arr[1][i];
+            assign  unit_res[2] = res_arr[2][i];
+            assign  unit_res[3] = res_arr[3][i];
+                 
+            reg  signed [1 : 0][RES_W  -1 : 0] pool_res1_r;
+            reg  signed [RES_W  -1 : 0] pool_res2_r;
             
             reg     [4  -1 : 0] pool_mask1_r;
             reg     [4  -1 : 0] pool_mask2_r;
@@ -163,7 +165,7 @@ module pe2ddr_dg#(
             always @ (posedge clk) begin
                 if (ddr_ready) begin
                     // step 1
-                    if (pooling) begin
+                    if (conf_pooling) begin
                         pool_res1_r[0] = (unit_res[0] > unit_res[1]) ? unit_res[0] : unit_res[1];
                         pool_res1_r[1] = (unit_res[2] > unit_res[3]) ? unit_res[2] : unit_res[3];
                     end
@@ -172,8 +174,8 @@ module pe2ddr_dg#(
                     end
                     
                     // step 2
-                    if (pooling) begin
-                        res_sel_r[i] = (pool_res1_r[0] > pool_res1_r[1]) pool_res1_r[0] : pool_res1_r[1];
+                    if (conf_pooling) begin
+                        res_sel_r[i] = (pool_res1_r[0] > pool_res1_r[1]) ? pool_res1_r[0] : pool_res1_r[1];
                     end
                     else begin
                         res_sel_r[i] = pool_res1_r[0];
@@ -185,7 +187,7 @@ module pe2ddr_dg#(
             always @ (posedge clk) begin
                 if (ddr_ready) begin
                     // step 1
-                    if (pooling) begin
+                    if (conf_pooling) begin
                         pool_mask1_r[0] <= (unit_res[0] > unit_res[1]);
                         pool_mask1_r[1] <= !(unit_res[0] > unit_res[1]);
                         pool_mask1_r[2] <= (unit_res[2] > unit_res[3]);
@@ -193,7 +195,7 @@ module pe2ddr_dg#(
                     end
                     
                     // step 2
-                    if (pooling) begin
+                    if (conf_pooling) begin
                         pool_mask2_r[0] <= pool_mask1_r[0] && (pool_res1_r[0] > pool_res1_r[1]);
                         pool_mask2_r[1] <= pool_mask1_r[1] && (pool_res1_r[0] > pool_res1_r[1]);
                         pool_mask2_r[2] <= pool_mask1_r[2] && !(pool_res1_r[0] > pool_res1_r[1]);

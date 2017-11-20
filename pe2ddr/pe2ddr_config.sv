@@ -154,7 +154,7 @@ module pe2ddr_config#(
                 ddr2_start_r        <= 1'b1;
                 ddr2_st_addr_r      <= st_addr;
                 ddr2_burst_r        <= ((pix_num + 1) * out_ch_seg) << 5;
-                ddr2_step_r         <= ((pix_num + 1) * image_width) << 5; 
+                ddr2_step_r         <= ((pix_num + 1) * img_width) << 5; 
                 ddr2_burst_num_r    <= row_num;
             end
             else if (opcode[3]) begin

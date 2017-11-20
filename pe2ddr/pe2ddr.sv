@@ -3,6 +3,7 @@ import  GLOBAL_PARAM::*;
 
 module pe2ddr#(
     parameter   BUF_DEPTH   = 256,
+    parameter   PE_NUM      = 32,
     parameter   ADDR_W      = bw(BUF_DEPTH)
     )(
     input   clk,
