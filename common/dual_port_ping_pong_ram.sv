@@ -17,13 +17,15 @@ module dual_port_ping_pong_ram#(
     input                   a_wr_en,    
     input   [ADDR_W -1 : 0] a_rd_addr,
     output  [WIDTH  -1 : 0] a_rd_data,
+    input                   a_rd_en,
     
     // port B
     input   [ADDR_W -1 : 0] b_wr_addr,
     input   [WIDTH  -1 : 0] b_wr_data,
     input                   b_wr_en,    
     input   [ADDR_W -1 : 0] b_rd_addr,
-    output  [WIDTH  -1 : 0] b_rd_data
+    output  [WIDTH  -1 : 0] b_rd_data,
+    input                   b_rd_en,
     );
     
     reg     flag_r = 1'b0;
@@ -46,17 +48,30 @@ module dual_port_ping_pong_ram#(
         wr_addr_1_r <= flag_r ? a_wr_addr : b_wr_addr;
         wr_addr_2_r <= flag_r ? b_wr_addr : a_wr_addr;
         
-        rd_addr_1_r <= flag_r ? a_rd_addr : b_rd_addr;
-        rd_addr_2_r <= flag_r ? b_rd_addr : a_rd_addr;
-        
         wr_data_1_r <= flag_r ? a_wr_data : b_wr_data;
         wr_data_2_r <= flag_r ? b_wr_data : a_wr_data;
         
         wr_en_1_r   <= flag_r ? a_wr_en : b_wr_en;
         wr_en_2_r   <= flag_r ? b_wr_en : a_wr_en;
+    end
+    
+    always @ (posedge clk) begin
+        if (flag_r) begin
+            rd_addr_1_r <= rd_en_a ? a_rd_addr : rd_addr_1_r;
+            rd_addr_2_r <= rd_en_b ? b_rd_addr : rd_addr_2_r;
+        end
+        else begin
+            rd_addr_2_r <= rd_en_a ? a_rd_addr : rd_addr_2_r;
+            rd_addr_1_r <= rd_en_b ? b_rd_addr : rd_addr_1_r;
+        end
         
-        a_rd_data_r <= flag_r ? rd_data_1 : rd_data_2;
-        b_rd_data_r <= flag_r ? rd_data_2 : rd_data_1;
+        if (rd_en_a) begin
+             a_rd_data_r <= flag_r ? rd_data_1 : rd_data_2;
+        end
+        
+        if (rd_en_b) begin
+            b_rd_data_r <= flag_r ? rd_data_2 : rd_data_1;
+        end
     end
     
     sdp_sync_ram #(
@@ -72,7 +87,7 @@ module dual_port_ping_pong_ram#(
         .dina   (wr_data_1_r            ), 
         .clka   (clk                    ), 
         .wea    (wr_en_1_r              ),  
-        .enb    (1'b1                   ),  
+        .enb    (flag_r ? rd_en_a : rd_en_b),  
         .rstb   (rst                    ), 
         .doutb  (rd_data_1              ) 
     );
@@ -90,7 +105,7 @@ module dual_port_ping_pong_ram#(
         .dina   (wr_data_2_r            ), 
         .clka   (clk                    ), 
         .wea    (wr_en_2_r              ),  
-        .enb    (1'b1                   ),  
+        .enb    (flag_r ? rd_en_b : rd_en_a),  
         .rstb   (rst                    ), 
         .doutb  (rd_data_2              ) 
     );

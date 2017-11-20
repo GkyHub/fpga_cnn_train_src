@@ -52,6 +52,7 @@ module pe_array#(
     input   [PE_NUM         -1 : 0] abuf_wr_tail_en,
     input   [ADDR_W         -1 : 0] abuf_rd_addr,
     output  [3 : 0][BATCH * RES_W  -1 : 0] abuf_rd_data,
+    input                           abuf_rd_en,
     
     input                   bbuf_acc_en,
     input                   bbuf_acc_new,
@@ -64,7 +65,8 @@ module pe_array#(
     input   [TAIL_W -1 : 0] bbuf_wr_tail,
     input                   bbuf_wr_tail_en,     
     input   [ADDR_W -1 : 0] bbuf_rd_addr,
-    output  [RES_W  -1 : 0] bbuf_rd_data
+    output  [RES_W  -1 : 0] bbuf_rd_data,
+    input                   bbuf_rd_en
     );
     
 //=============================================================================
@@ -120,7 +122,9 @@ module pe_array#(
     reg     [3 : 0][BATCH * RES_W - 1 : 0] abuf_rd_data_r;
     
     always @ (posedge clk) begin
-        abuf_rd_data_r <= grp_abuf_rd_data[rd_sel];
+        if (abuf_rd_en) begin
+            abuf_rd_data_r <= grp_abuf_rd_data[rd_sel];
+        end
     end
     
     assign  abuf_rd_data = abuf_rd_data_r;
@@ -180,7 +184,8 @@ module pe_array#(
                     .abuf_wr_tail   (abuf_wr_tail               ),
                     .abuf_wr_tail_en(abuf_wr_tail_en[i*4+j]     ),
                     .abuf_rd_addr   (abuf_rd_addr               ),
-                    .abuf_rd_data   (grp_abuf_rd_data[i][j]     )
+                    .abuf_rd_data   (grp_abuf_rd_data[i][j]     ),
+                    .abuf_rd_en     (abuf_rd_en                 )
                 );
             end
         end
@@ -208,7 +213,8 @@ module pe_array#(
         .wr_tail_en (bbuf_wr_tail_en),
 
         .rd_addr    (bbuf_rd_addr   ),
-        .rd_data    (bbuf_rd_data   )
+        .rd_data    (bbuf_rd_data   ),
+        .rd_en      (bbuf_rd_en     )
     );
     
 endmodule

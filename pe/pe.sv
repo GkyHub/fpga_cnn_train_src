@@ -51,7 +51,8 @@ module pe#(
     input   [BATCH * TAIL_W -1 : 0] abuf_wr_tail,
     input                           abuf_wr_tail_en,    
     input   [bw(BUF_DEPTH)  -1 : 0] abuf_rd_addr,
-    output  [BATCH * RES_W  -1 : 0] abuf_rd_data
+    output  [BATCH * RES_W  -1 : 0] abuf_rd_data,
+    input                           abuf_rd_en
     );
     
 //=============================================================================
@@ -260,7 +261,8 @@ module pe#(
         .wr_tail_en (abuf_wr_tail_en),
     
         .rd_addr    (abuf_rd_addr   ),
-        .rd_data    (abuf_rd_data   )
+        .rd_data    (abuf_rd_data   ),
+        .rd_en      (abuf_rd_en     )
     );
         
 endmodule

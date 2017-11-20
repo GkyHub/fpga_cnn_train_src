@@ -10,8 +10,6 @@ module pe2ddr_config#(
     input   [4      -1 : 0] layer_type,
     input   [4      -1 : 0] out_ch_seg,
     input   [8      -1 : 0] img_width,
-    input                   pooling,
-    input                   relu,
     
     input   [INST_W -1 : 0] ins,
     output                  ins_ready,
@@ -21,10 +19,6 @@ module pe2ddr_config#(
     
     output          dg_start,
     input           dg_done,
-    output  [3 : 0] dg_conf_layer_type,
-    output          dg_conf_pooling,
-    output          dg_conf_relu,
-    output  [3 : 0] dg_conf_ch_num,
     output  [3 : 0] dg_conf_pix_num,
     output  [3 : 0] dg_conf_row_num,
     output  [5 : 0] dg_conf_shift,
@@ -48,7 +42,9 @@ module pe2ddr_config#(
     output  [DDR_ADDR_W -1 : 0] ddr2_st_addr,
     output  [BURST_W    -1 : 0] ddr2_burst,
     output  [DDR_ADDR_W -1 : 0] ddr2_step,
-    output  [BURST_W    -1 : 0] ddr2_burst_num
+    output  [BURST_W    -1 : 0] ddr2_burst_num,
+    
+    output      path_sel
     );
     
     reg             dg_start_r;
@@ -137,7 +133,7 @@ module pe2ddr_config#(
             ddr1_start_r        <= 1'b1;
             ddr1_st_addr_r      <= st_addr;
             ddr1_burst_r        <= ((pix_num + 1) * out_ch_seg) << 5;
-            ddr1_step_r         <= ((pix_num + 1) * image_width) << 5; 
+            ddr1_step_r         <= ((pix_num + 1) * img_width) << 5; 
             ddr1_burst_num_r    <= row_num;    
         end
         else begin
@@ -217,6 +213,40 @@ module pe2ddr_config#(
     
     assign  ins_ready = ready_r;
     
+//=============================================================================
+// read address and data selection
+//=============================================================================
+
+    reg     path_sel_r;
+    reg     [bw(PE_NUM / 4) -1 : 0] rd_sel_r;
     
+    always @ (posedge clk) begin
+        if (rst) begin
+            rd_sel_r <= 0;
+        end
+        else if (ins_valid && ins_ready) begin
+            if (layer_type[0]) begin
+                rd_sel_r <= buf_id >> 2;
+            end
+            else begin
+                rd_sel_r <= buf_id;
+            end
+        end
+    end
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            path_sel_r <= 1'b0;
+        end
+        else if (dg_start_r) begin
+            path_sel_r <= 1'b0;
+        end
+        else if (ab_start_r) begin
+            path_sel_r <= 1'b1;
+        end
+    end
+    
+    assign  path_sel = path_sel_r;
+    assign  rd_sel   = rd_sel_r;
     
 endmodule

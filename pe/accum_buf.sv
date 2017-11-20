@@ -29,7 +29,8 @@ module accum_buf#(
     
     // store result port
     input   [ADDR_W -1 : 0]                 rd_addr,
-    output  [BATCH  -1 : 0][RES_W   -1 : 0] rd_data
+    output  [BATCH  -1 : 0][RES_W   -1 : 0] rd_data,
+    input   rd_en
     );
     
     // address and enable signal delay to sync with ram read delay
@@ -93,13 +94,15 @@ module accum_buf#(
         .a_wr_en    (accum_en_d[4] != 0 ),    
         .a_rd_addr  (accum_addr         ),
         .a_rd_data  (accum_rd_data      ),
+        .a_rd_en    (1'b1               ),
     
         // port B
         .b_wr_addr  (wr_addr    ),
         .b_wr_data  (wr_data    ),
         .b_wr_en    (wr_data_en ),    
         .b_rd_addr  (rd_addr    ),
-        .b_rd_data  (rd_msb     )
+        .b_rd_data  (rd_msb     ),
+        .b_rd_en    (rd_en      )
     );
     
     dual_port_ping_pong_ram#(
@@ -118,13 +121,15 @@ module accum_buf#(
         .a_wr_en    (accum_en_d[4] != 0 ),    
         .a_rd_addr  (accum_addr         ),
         .a_rd_data  (accum_rd_tail      ),
+        .a_rd_en    (1'b1               ),
     
         // port B
         .b_wr_addr  (wr_addr    ),
         .b_wr_data  (wr_tail    ),
         .b_wr_en    (wr_tail_en ),    
         .b_rd_addr  (rd_addr    ),
-        .b_rd_data  (rd_lsb     )
+        .b_rd_data  (rd_lsb     ),
+        .b_rd_en    (rd_en      )
     );
     
 endmodule

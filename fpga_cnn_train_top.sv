@@ -97,9 +97,11 @@ module fpga_cnn_train_top#(
     
     wire           [ADDR_W         -1 : 0] abuf_rd_addr;
     wire    [3 : 0][BATCH * RES_W  -1 : 0] abuf_rd_data;
+    wire                                   abuf_rd_en;
     
     wire    [ADDR_W -1 : 0] bbuf_rd_addr;
     wire    [RES_W  -1 : 0] bbuf_rd_data;
+    wire                    bbuf_rd_en;
     
     wire    [PE_NUM -1 : 0] switch_d;
     wire    [PE_NUM -1 : 0] switch_p;
@@ -129,7 +131,7 @@ module fpga_cnn_train_top#(
         .ins_valid  (ins_valid  ),
         .ins_ready  (ins_ready  ),
         .ins        (ins        ),
-    
+
         .working    (working    ),
 
         .ddr2pe_ins_valid   (ddr2pe_ins_valid   ),
@@ -167,8 +169,8 @@ module fpga_cnn_train_top#(
         .IDX_DEPTH  (IDX_DEPTH  ),
         .PE_NUM     (PE_NUM     )
     ) ddr2pe_inst (
-        .clk    (clk    ),
-        .rst    (rst    ),
+        .clk            (clk                ),
+        .rst            (rst                ),
     
         .layer_type     (conf_layer_type    ),
         .image_width    (image_width        ),
@@ -181,16 +183,16 @@ module fpga_cnn_train_top#(
         .ddr1_data      (ddr1_in_data       ),
         .ddr1_valid     (ddr1_in_valid      ),
         .ddr1_ready     (ddr1_in_ready      ),
-                                
+
         .ddr1_addr      (ddr1_in_addr       ),
         .ddr1_size      (ddr1_in_size       ),
         .ddr1_addr_valid(ddr1_in_addr_valid ),
         .ddr1_addr_ready(ddr1_in_addr_ready ),
-                                
+
         .ddr2_data      (ddr2_in_data       ),
         .ddr2_valid     (ddr2_in_valid      ),
         .ddr2_ready     (ddr2_in_ready      ),
-                                
+
         .ddr2_addr      (ddr2_in_addr       ),
         .ddr2_size      (ddr2_in_size       ),
         .ddr2_addr_valid(ddr2_in_addr_valid ),
@@ -283,6 +285,51 @@ module fpga_cnn_train_top#(
         
         .bbuf_rd_addr   (bbuf_rd_addr       ),
         .bbuf_rd_data   (bbuf_rd_data       )
+    );
+    
+    pe2ddr#(
+        .BUF_DEPTH  (BUF_DEPTH  )
+    ) pe2ddr_inst (
+        .clk            (clk                ),
+        .rst            (rst                ),
+        
+        .layer_type     (conf_layer_type    ),
+        .out_ch_seg     (conf_out_ch_seg    ),
+        .img_width      (conf_out_img_width ),
+        .pooling        (conf_pooling       ),
+        .relu           (conf_relu          ),
+        
+        .ins            (pe2ddr_ins         ),
+        .ins_ready      (pe2ddr_ins_ready   ),
+        .ins_valid      (pe2ddr_ins_valid   ),
+        
+        .rd_sel         (rd_sel             ),
+    
+        .abuf_rd_addr   (abuf_rd_addr       ),
+        .abuf_rd_data   (abuf_rd_data       ),
+        .abuf_rd_en     (abuf_rd_en         ),
+        
+        .bbuf_rd_addr   (bbuf_rd_addr       ),
+        .bbuf_rd_data   (bbuf_rd_data       ),
+        .bbuf_rd_en     (bbuf_rd_en         ),
+    
+        .ddr1_data      (ddr1_out_data      ),
+        .ddr1_valid     (ddr1_out_valid     ),
+        .ddr1_ready     (ddr1_out_ready     ),
+                         
+        .ddr1_addr      (ddr1_out_addr      ),
+        .ddr1_size      (ddr1_out_size      ),
+        .ddr1_addr_valid(ddr1_out_addr_valid),
+        .ddr1_addr_ready(ddr1_out_addr_ready),
+
+        .ddr2_data      (ddr2_out_data      ),
+        .ddr2_valid     (ddr2_out_valid     ),
+        .ddr2_ready     (ddr2_out_ready     ),
+
+        .ddr2_addr      (ddr2_out_addr      ),
+        .ddr2_size      (ddr2_out_size      ),
+        .ddr2_addr_valid(ddr2_out_addr_valid),
+        .ddr2_addr_ready(ddr2_out_addr_ready)
     );
     
 endmodule
