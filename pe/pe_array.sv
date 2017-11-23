@@ -6,6 +6,7 @@ import  GLOBAL_PARAM::IDX_W;
 import  GLOBAL_PARAM::bw;
 import  INS_CONST::INST_W;
 
+(* dont_touch = "true" *)
 module pe_array#(
     parameter   PE_NUM      = 32,
     parameter   BUF_DEPTH   = 256,

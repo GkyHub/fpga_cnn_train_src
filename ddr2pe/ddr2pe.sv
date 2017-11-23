@@ -11,8 +11,10 @@ module ddr2pe#(
     input   rst,
     
     input   [4      -1 : 0] layer_type,
-    input   [8      -1 : 0] image_width,
+    input   [8      -1 : 0] in_img_width,
+    input   [8      -1 : 0] out_img_width,
     input   [4      -1 : 0] in_ch_seg,
+    input   [4      -1 : 0] out_ch_seg,
     input                   depool,
     
     input                   ins_valid,
@@ -85,7 +87,7 @@ module ddr2pe#(
     
     wire                    pbuf_start;
     wire                    pbuf_done;
-    wire    [8      -1 : 0] pbuf_conf_trans_num;
+    wire    [16     -1 : 0] pbuf_conf_trans_num;
     wire    [4      -1 : 0] pbuf_conf_mode;     
     wire    [4      -1 : 0] pbuf_conf_ch_num;   
     wire    [4      -1 : 0] pbuf_conf_pix_num;  
@@ -96,14 +98,15 @@ module ddr2pe#(
     wire                    abuf_start;
     wire                    abuf_done;
     wire    [2      -1 : 0] abuf_conf_trans_type;
-    wire    [8      -1 : 0] abuf_conf_trans_num;
+    wire    [16     -1 : 0] abuf_conf_trans_num;
     wire    [PE_NUM -1 : 0] abuf_conf_mask;
     
     wire            dbuf_ddr1_ready;
     wire            dbuf_ddr2_ready;
-    wire            ibuf_ddr2_ready;
+    wire            ibuf_ddr1_ready;
     wire            pbuf_ddr1_ready;
     wire            pbuf_ddr2_ready;
+    
     wire            abuf_ddr2_ready;
     
     wire                        ddr1_start;
@@ -120,7 +123,7 @@ module ddr2pe#(
     wire    [DDR_ADDR_W -1 : 0] ddr2_step;
     wire    [BURST_W    -1 : 0] ddr2_burst_num;
     
-    wire            ddr1_ready_mux;
+    wire    [1 : 0] ddr1_ready_mux;
     wire    [1 : 0] ddr2_ready_mux;
     
     wire    [1 : 0] dbuf_ddr_sel;
@@ -134,10 +137,11 @@ module ddr2pe#(
         .clk        (clk        ),
         .rst        (rst        ),
         
-        .layer_type (layer_type ),
-        .image_width(image_width),
-        .in_ch_seg  (in_ch_seg  ),
-        .depool     (depool     ),
+        .layer_type     (layer_type     ),
+        .in_img_width   (in_img_width   ),
+        .out_img_width  (out_img_width  ),
+        .in_ch_seg      (in_ch_seg      ),
+        .depool         (depool         ),
     
         .ins_valid  (ins_valid  ),
         .ins_ready  (ins_ready  ),
@@ -209,9 +213,9 @@ module ddr2pe#(
         .conf_idx_num   (ibuf_conf_idx_num  ),
         .conf_mask      (ibuf_conf_mask     ),
     
-        .ddr_data       (ddr2_data          ),
-        .ddr_valid      (ddr2_valid && ibuf_ddr_sel),
-        .ddr_ready      (ibuf_ddr2_ready    ),
+        .ddr_data       (ddr1_data          ),
+        .ddr_valid      (ddr1_valid && ibuf_ddr_sel),
+        .ddr_ready      (ibuf_ddr1_ready    ),
     
         .idx_wr_data    (idx_wr_data        ),
         .idx_wr_addr    (idx_wr_addr        ),
@@ -352,9 +356,9 @@ module ddr2pe#(
         .ddr_addr_ready (ddr2_addr_ready)
     );
     
-    assign  ddr1_ready = ddr1_ready_mux ? pbuf_ddr1_ready : dbuf_ddr1_ready;
-    assign  ddr2_ready = ddr2_ready_mux[0] ? 
-                        (ddr2_ready_mux[1] ? abuf_ddr2_ready : ibuf_ddr2_ready) :
-                        (ddr2_ready_mux[1] ? pbuf_ddr2_ready : dbuf_ddr2_ready);
+    assign  ddr1_ready = ddr1_ready_mux[1] ? pbuf_ddr1_ready : 
+                        (ddr1_ready_mux[0] ? ibuf_ddr1_ready : dbuf_ddr1_ready);
+    assign  ddr2_ready = ddr2_ready_mux[1] ? abuf_ddr2_ready :
+                        (ddr2_ready_mux[0] ? pbuf_ddr2_ready : dbuf_ddr2_ready);
     
 endmodule

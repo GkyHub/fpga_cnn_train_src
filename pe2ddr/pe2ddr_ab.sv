@@ -75,6 +75,8 @@ module pe2ddr_ab#(
         end
     end
     
+    assign  abuf_rd_addr = abuf_addr_r;
+    
     always @ (posedge clk) begin
         if (rst) begin
             abuf_rd_valid_r <= 1'b0;
@@ -94,6 +96,8 @@ module pe2ddr_ab#(
     
     PipeEn#(.DW(1), .L(7)) abuf_valid_pipe (.clk(clk), .clk_en(ddr2_ready),
         .s(abuf_rd_valid_r), .d(abuf_rd_valid_d));
+        
+    assign  abuf_rd_addr = abuf_addr_r;
     
 //=============================================================================
 // bbuf_rd_addr
@@ -251,5 +255,30 @@ module pe2ddr_ab#(
             end
         end
     end
+
+//=============================================================================
+// done signal
+//=============================================================================
+
+    reg     done_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            done_r <= 1'b1;
+        end
+        else if (start) begin
+            done_r <= 1'b0;
+        end
+        else begin
+            if (conf_trans_type[1] && (abuf_addr_r == conf_trans_num)) begin
+                done_r <= 1'b1;
+            end
+            else if (!conf_trans_type[1] && (bbuf_addr_r == conf_trans_num)) begin
+                done_r <= 1'b1;
+            end
+        end
+    end
+    
+    assign  done = done_r;
     
 endmodule

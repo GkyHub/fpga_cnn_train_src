@@ -24,6 +24,7 @@ module pe2ddr_dg#(
     
     output  [ADDR_W -1 : 0] bbuf_rd_addr,
     input   [RES_W  -1 : 0] bbuf_rd_data,
+    output                  bbuf_rd_en,
     
     output  [DDR_W      -1 : 0] ddr1_data,
     output                      ddr1_valid,
@@ -36,6 +37,7 @@ module pe2ddr_dg#(
     
     wire    ddr_ready = conf_layer_type[1] ? ddr1_ready : (ddr1_ready && ddr2_ready);
     assign  abuf_rd_en = ddr_ready;
+    assign  bbuf_rd_en = ddr_ready;
 
 //=============================================================================
 // address generator   
@@ -61,6 +63,10 @@ module pe2ddr_dg#(
     end
     
     always @ (posedge clk) begin
+        start_d_r <= start;
+    end
+    
+    always @ (posedge clk) begin
         if (ddr_ready) begin
             ch_cnt_d_r <= ch_cnt_r;
         end
@@ -79,8 +85,8 @@ module pe2ddr_dg#(
         end
         else if (ddr_ready && nxt_pix_r) begin
             if (pix_cnt_r == conf_pix_num) begin
-                pix_cnt_r <= 0;
-                row_cnt_r <= row_cnt_r + 1;
+                pix_cnt_r <= (row_cnt_r == conf_row_num) ? pix_cnt_r : 0;
+                row_cnt_r <= (row_cnt_r == conf_row_num) ? row_cnt_r : row_cnt_r + 1;
             end
             else begin
                 pix_cnt_r <= pix_cnt_r + 1;
@@ -112,7 +118,7 @@ module pe2ddr_dg#(
         else if (start_d_r) begin
             valid_r <= 1'b1;
         end
-        else if (ddr_ready && nxt_pix_r && row_cnt_r == conf_row_num) begin
+        else if (ddr_ready && nxt_pix_r && (pix_cnt_r == conf_pix_num) && row_cnt_r == conf_row_num) begin
             valid_r <= 1'b0;
         end
     end
@@ -120,6 +126,8 @@ module pe2ddr_dg#(
     PipeEn#(.DW(4), .L(3)) bbuf_addr_pipe (.clk(clk), .clk_en(ddr_ready), 
         .s(ch_cnt_d_r), .d(bbuf_rd_addr[3:0]));
     assign  bbuf_rd_addr[ADDR_W-1:4] = 0;
+    
+    assign  abuf_rd_addr = abuf_rd_addr_r;
 
 //=============================================================================
 // data path 
@@ -247,7 +255,7 @@ module pe2ddr_dg#(
     // valid signal delay
     RPipeEn#(.DW(1), .L(12)) pool_mask_pipe(.clk(clk), .rst(rst), 
         .clk_en(ddr_ready), .s(valid_r), .d(ddr1_valid));
-    assign  ddr2_valid = ddr1_valid;
+    assign  ddr2_valid = (conf_layer_type[2:1] == 2'b00) ? ddr1_valid : 1'b0;
     
     // output data
     assign  ddr1_data = ddr1_data_arr;

@@ -48,7 +48,7 @@ module ddr2dbuf#(
     reg     [3 : 0] ch_cnt_d;
     reg             next_pix_r;
     reg     [ADDR_W -1 : 0] conv_addr;
-    wire    [4      -1 : 0] conv_wr_mask;
+    // wire    [4      -1 : 0] conv_wr_mask;
     reg             conv_last_r;
     
     wire    conv_ddr_valid = (conf_mode[2:1] == 2'b01) ? (ddr1_valid && ddr2_valid) : ddr1_valid;

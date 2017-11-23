@@ -1,5 +1,7 @@
 import GLOBAL_PARAM::DDR_ADDR_W;
 import GLOBAL_PARAM::BURST_W;
+import GLOBAL_PARAM::DATA_W;
+import GLOBAL_PARAM::TAIL_W;
 import INS_CONST::*;
 
 module ddr2pe_config#(
@@ -9,8 +11,10 @@ module ddr2pe_config#(
     input           rst,
         
     input   [4      -1 : 0] layer_type,
-    input   [8      -1 : 0] image_width,
+    input   [8      -1 : 0] in_img_width,
+    input   [8      -1 : 0] out_img_width,
     input   [4      -1 : 0] in_ch_seg,
+    input   [4      -1 : 0] out_ch_seg,
     input                   depool,
     
     input                   ins_valid,
@@ -34,7 +38,7 @@ module ddr2pe_config#(
     
     output                  pbuf_start,
     input                   pbuf_done,
-    output  [8      -1 : 0] pbuf_conf_trans_num,
+    output  [16     -1 : 0] pbuf_conf_trans_num,
     output  [4      -1 : 0] pbuf_conf_mode,     
     output  [4      -1 : 0] pbuf_conf_ch_num,   
     output  [4      -1 : 0] pbuf_conf_pix_num,  
@@ -45,7 +49,7 @@ module ddr2pe_config#(
     output                  abuf_start,
     input                   abuf_done,
     output  [2      -1 : 0] abuf_conf_trans_type,
-    output  [8      -1 : 0] abuf_conf_trans_num,
+    output  [16     -1 : 0] abuf_conf_trans_num,
     output  [PE_NUM -1 : 0] abuf_conf_mask,
     
     output                      ddr1_start,
@@ -62,7 +66,7 @@ module ddr2pe_config#(
     output  [DDR_ADDR_W -1 : 0] ddr2_step,
     output  [BURST_W    -1 : 0] ddr2_burst_num,
     
-    output          ddr1_ready_mux,
+    output  [1 : 0] ddr1_ready_mux,
     output  [1 : 0] ddr2_ready_mux,
     
     output  [1 : 0] dbuf_ddr_sel,
@@ -77,6 +81,7 @@ module ddr2pe_config#(
     wire    [3 : 0] pix_num = ins[43:40];
     wire    [3 : 0] row_num = ins[47:44];
     wire    [31: 0] st_addr = ins[31: 0];
+    wire    [11: 0] p_size  = ins[51:40];
     
     reg                     ibuf_start_r;
     reg     [4      -1 : 0] ibuf_conf_mode_r;
@@ -91,7 +96,7 @@ module ddr2pe_config#(
     reg     [PE_NUM -1 : 0] dbuf_conf_mask_r;
     
     reg                     pbuf_start_r;
-    reg     [8      -1 : 0] pbuf_conf_trans_num_r;
+    reg     [16     -1 : 0] pbuf_conf_trans_num_r;
     reg     [4      -1 : 0] pbuf_conf_mode_r;     
     reg     [4      -1 : 0] pbuf_conf_ch_num_r;   
     reg     [4      -1 : 0] pbuf_conf_pix_num_r;  
@@ -100,7 +105,7 @@ module ddr2pe_config#(
 
     reg                     abuf_start_r;
     reg     [2      -1 : 0] abuf_conf_trans_type_r;
-    reg     [8      -1 : 0] abuf_conf_trans_num_r;
+    reg     [16     -1 : 0] abuf_conf_trans_num_r;
     reg     [PE_NUM -1 : 0] abuf_conf_mask_r;
     
     reg                         ddr1_start_r;
@@ -119,10 +124,24 @@ module ddr2pe_config#(
     reg             ibuf_ddr_sel_r;
     reg     [1 : 0] pbuf_ddr_sel_r;
     reg             abuf_ddr_sel_r;
+    
+    reg     [4 : 0] in_ch_seg_r;
+    reg     [4 : 0] out_ch_seg_r;
+    reg     [7 : 0] in_img_width_r;
+    reg     [7 : 0] out_img_width_r;
+
+    always @ (posedge clk) begin
+        in_ch_seg_r     <= in_ch_seg + 1;
+        out_ch_seg_r    <= out_ch_seg + 1;
+        in_img_width_r  <= in_img_width + 1;
+        out_img_width_r <= out_img_width + 1;
+    end
 
 //=============================================================================
 // Configuration Logic
 //=============================================================================
+
+    localparam TD_RATE = TAIL_W / DATA_W;
     
     // i buffer configuration
     always @ (posedge clk) begin
@@ -156,7 +175,7 @@ module ddr2pe_config#(
         else if (ins_valid && ins_ready && (opcode == RD_OP_D || opcode == RD_OP_G)) begin
             dbuf_start_r        <= 1'b1;
             dbuf_conf_mode_r    <= layer_type;
-            dbuf_conf_ch_num_r  <= size;
+            dbuf_conf_ch_num_r  <= in_ch_seg;
             dbuf_conf_row_num_r <= row_num;
             dbuf_conf_pix_num_r <= pix_num;
             dbuf_conf_mask_r    <= '1;
@@ -181,9 +200,9 @@ module ddr2pe_config#(
             (((opcode == RD_OP_G)  && (layer_type[2:1] == 2'b10)) || 
              ((opcode == RD_OP_DW) && (layer_type[2:1] != 2'b10)))) begin
             pbuf_start_r            <= 1'b1;
-            pbuf_conf_trans_num_r   <= size;
+            pbuf_conf_trans_num_r   <= p_size;
             pbuf_conf_mode_r        <= layer_type;  
-            pbuf_conf_ch_num_r      <= size;
+            pbuf_conf_ch_num_r      <= (opcode == RD_OP_G) ? out_ch_seg : size;
             pbuf_conf_pix_num_r     <= pix_num;
             pbuf_conf_row_num_r     <= row_num;
             pbuf_conf_mask_r        <= layer_type[0] ? (1 << buf_id) : (15 << (buf_id << 2));
@@ -204,8 +223,8 @@ module ddr2pe_config#(
         else if (ins_valid && ins_ready && layer_type[2:1] == 2'b10 &&
             (opcode != RD_OP_D) && (opcode != RD_OP_G)) begin
             abuf_start_r            <= 1'b1;
-            abuf_conf_trans_type_r  <= layer_type;
-            abuf_conf_trans_num_r   <= size;
+            abuf_conf_trans_type_r  <= layer_type[1:0];
+            abuf_conf_trans_num_r   <= opcode[1] ? (p_size * TD_RATE) : p_size;
             abuf_conf_mask_r        <= layer_type[0] ? (1 << buf_id) : (15 << (buf_id << 2));        
         end
         else begin
@@ -225,15 +244,15 @@ module ddr2pe_config#(
             if (opcode == 4'b0100) begin
                 ddr1_start_r    <= 1'b1;
                 ddr1_st_addr_r  <= st_addr;
-                ddr1_burst_r    <= size;
+                ddr1_burst_r    <= size + 1;
                 ddr1_step_r     <= 0;
                 ddr1_burst_num_r<= 0;
             end
             else if (opcode[3:2] == 2'b00) begin
                 ddr1_start_r    <= 1'b1;
                 ddr1_st_addr_r  <= st_addr;
-                ddr1_burst_r    <= ((pix_num + 1) * in_ch_seg) << 5;
-                ddr1_step_r     <= ((pix_num + 1) * image_width) << 5;
+                ddr1_burst_r    <= ((pix_num + 1) * in_ch_seg_r) << 5;
+                ddr1_step_r     <= ((pix_num + 1) * in_img_width_r) << 5;
                 ddr1_burst_num_r<= row_num;
             end
             else begin
@@ -257,14 +276,14 @@ module ddr2pe_config#(
             if (opcode == RD_OP_G) begin
                 ddr2_start_r    <= 1'b1;
                 ddr2_st_addr_r  <= st_addr;
-                ddr2_burst_r    <= ((pix_num + 1) * in_ch_seg) << 5;
-                ddr2_step_r     <= ((pix_num + 1) * image_width) << 5;
+                ddr2_burst_r    <= ((pix_num + 1) * out_ch_seg_r) << 5;
+                ddr2_step_r     <= ((pix_num + 1) * out_img_width_r) << 5;
                 ddr2_burst_num_r<= row_num;
             end
             else if (opcode[3:2] == 2'b01) begin
                 ddr2_start_r    <= 1'b1;
                 ddr2_st_addr_r  <= st_addr;
-                ddr2_burst_r    <= opcode[1] ? size * 3 : size;
+                ddr2_burst_r    <= opcode[1] ? (p_size * TD_RATE) : p_size;
                 ddr2_step_r     <= 0;
                 ddr2_burst_num_r<= 0;
             end
@@ -359,18 +378,21 @@ module ddr2pe_config#(
 //=============================================================================
 // DDR ready signal mux control
 //=============================================================================
-    reg             ddr1_ready_mux_r;
+    reg     [1 : 0] ddr1_ready_mux_r;
     reg     [1 : 0] ddr2_ready_mux_r;    
     
     always @ (posedge clk) begin
         if (rst) begin
             ddr1_ready_mux_r <= 1'b0;
         end
-        else if (dbuf_start_r) begin
-            ddr1_ready_mux_r <= 1'b0;
-        end
-        else if (pbuf_start_r) begin
-            ddr1_ready_mux_r <= 1'b1;
+        else begin
+            case({dbuf_start_r, ibuf_start_r, pbuf_start_r, abuf_start_r})
+            4'b1000: ddr1_ready_mux_r <= 2'b00; // d buf
+            4'b0110: ddr1_ready_mux_r <= 2'b01; // i buf
+            4'b0101: ddr1_ready_mux_r <= 2'b01; // i buf
+            4'b0010: ddr1_ready_mux_r <= 2'b10; // p buf
+            default: ddr1_ready_mux_r <= ddr1_ready_mux_r;
+            endcase
         end
     end
     
@@ -379,14 +401,12 @@ module ddr2pe_config#(
             ddr2_ready_mux_r <= 2'b00;
         end
         else begin
-            unique case(
-                {dbuf_start_r, ibuf_start_r, pbuf_start_r, abuf_start_r})
+            case({dbuf_start_r, ibuf_start_r, pbuf_start_r, abuf_start_r})
             4'b1000: ddr2_ready_mux_r <= 2'b00;
-            4'b0100: ddr2_ready_mux_r <= 2'b01;
             4'b0110: ddr2_ready_mux_r <= 2'b01;
-            4'b0010: ddr2_ready_mux_r <= 2'b10;
-            4'b0001: ddr2_ready_mux_r <= 2'b11;
-            4'b0000: ddr2_ready_mux_r <= 2'b00;
+            4'b0101: ddr2_ready_mux_r <= 2'b10;
+            4'b0001: ddr2_ready_mux_r <= 2'b10;
+            default: ddr2_ready_mux_r <= ddr2_ready_mux_r;
             endcase
         end
     end
@@ -438,20 +458,20 @@ module ddr2pe_config#(
     // pbuf valid signal
     always @ (posedge clk) begin
         if (rst) begin
-            dbuf_ddr_sel_r <= 2'b00;
+            pbuf_ddr_sel_r <= 2'b00;
         end
         else if (ins_valid && ins_ready && 
             (((opcode == RD_OP_G)  && (layer_type[2:1] == 2'b10)) || 
              ((opcode == RD_OP_DW) && (layer_type[2:1] != 2'b10)))) begin
             if (opcode == RD_OP_D) begin
-                dbuf_ddr_sel_r <= 2'b01;
+                pbuf_ddr_sel_r <= 2'b01;
             end
             else if (opcode == RD_OP_DW) begin
-                dbuf_ddr_sel_r <= 2'b11;
+                pbuf_ddr_sel_r <= 2'b11;
             end            
         end
         else if (dbuf_done_pulse) begin
-            dbuf_ddr_sel_r <= 2'b00;
+            pbuf_ddr_sel_r <= 2'b00;
         end
     end
     

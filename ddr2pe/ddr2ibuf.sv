@@ -62,7 +62,7 @@ module ddr2ibuf#(
             ddr_ready_r <= 1'b0;
         end
         else begin
-            ddr_ready_r <= (batch_cnt_r == IDX_BATCH - 2) || (idx_cnt_r == conf_idx_num);
+            ddr_ready_r <= (batch_cnt_r == IDX_BATCH - 2) || (idx_cnt_r == conf_idx_num - 1);
         end
     end
     

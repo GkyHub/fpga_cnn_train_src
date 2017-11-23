@@ -96,7 +96,7 @@ module pe2ddr_config#(
             dg_conf_pix_num_r    <= pix_num;
             dg_conf_row_num_r    <= row_num;
             dg_conf_shift_r      <= shift;
-            dg_conf_pe_sel_r     <= layer_type[0] ? 2'b00 : buf_id[1:0];
+            dg_conf_pe_sel_r     <= layer_type[0] ? buf_id[1:0] : 2'b00;
         end
         else begin
             dg_start_r           <= 1'b0;
@@ -134,7 +134,7 @@ module pe2ddr_config#(
             ddr1_st_addr_r      <= st_addr;
             ddr1_burst_r        <= ((pix_num + 1) * out_ch_seg) << 5;
             ddr1_step_r         <= ((pix_num + 1) * img_width) << 5; 
-            ddr1_burst_num_r    <= row_num;    
+            ddr1_burst_num_r    <= row_num + 1;    
         end
         else begin
             ddr1_start_r <= 1'b0;
@@ -155,7 +155,7 @@ module pe2ddr_config#(
                 ddr2_st_addr_r      <= st_addr;
                 ddr2_burst_r        <= ((pix_num + 1) * out_ch_seg) << 5;
                 ddr2_step_r         <= ((pix_num + 1) * img_width) << 5; 
-                ddr2_burst_num_r    <= row_num;
+                ddr2_burst_num_r    <= row_num + 1;
             end
             else if (opcode[3]) begin
                 ddr2_start_r        <= 1'b1;
@@ -172,6 +172,30 @@ module pe2ddr_config#(
             ddr2_start_r <= 1'b0;
         end
     end
+    
+    assign  dg_start                = dg_start_r;
+    assign  dg_conf_ch_num          = dg_conf_ch_num_r;
+    assign  dg_conf_pix_num         = dg_conf_pix_num_r;
+    assign  dg_conf_row_num         = dg_conf_row_num_r;
+    assign  dg_conf_shift           = dg_conf_shift_r;
+    assign  dg_conf_pe_sel          = dg_conf_pe_sel_r;
+
+    assign  ab_start                = ab_start_r;
+    assign  ab_conf_trans_type      = ab_conf_trans_type_r;
+    assign  ab_conf_trans_num       = ab_conf_trans_num_r;
+    assign  ab_conf_grp_sel         = ab_conf_grp_sel_r;
+
+    assign  ddr1_start              = ddr1_start_r;
+    assign  ddr1_st_addr            = ddr1_st_addr_r;
+    assign  ddr1_burst              = ddr1_burst_r;
+    assign  ddr1_step               = ddr1_step_r;
+    assign  ddr1_burst_num          = ddr1_burst_num_r;
+
+    assign  ddr2_start              = ddr2_start_r;
+    assign  ddr2_st_addr            = ddr2_st_addr_r;
+    assign  ddr2_burst              = ddr2_burst_r;
+    assign  ddr2_step               = ddr2_step_r;
+    assign  ddr2_burst_num          = ddr2_burst_num_r;
     
 //=============================================================================
 // Status Logic

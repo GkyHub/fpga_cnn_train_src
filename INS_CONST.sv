@@ -24,12 +24,11 @@ package INS_CONST;
     localparam LT_U_CONV    = 4'b0100;
     localparam LT_U_FC      = 4'b0101;
     
-    
     // load instruction format
     // [63:62] instruction type: 2'b00
     // [61:58] opcode
     // [57:52] buf_id
-    // [51:40] null
+    // [51:40] {4'd0, row_num, pix_num} / {param_size}
     // [39:32] size
     // [31: 0] ddr address
     localparam RD_OP_D      = 4'b0000;  // neuron
@@ -59,5 +58,59 @@ package INS_CONST;
     localparam WR_OP_B      = 4'b1010;
     localparam WR_OP_TW     = 4'b1001;
     localparam WR_OP_TB     = 4'b1011;
+    
+    // instruction generation function for simulation
+    function [63: 0] INS_CONF;
+        input   [3 : 0] layer_type;
+        input   pooling, relu;
+        input   [3 : 0] in_ch_seg, out_ch_seg;
+        input   [7 : 0] in_img_width, out_img_width;
+        
+        begin
+            INS_CONF = {2'b11, layer_type, pooling, relu, in_ch_seg, out_ch_seg, 
+                in_img_width, out_img_width, 32'd0};
+        end
+    endfunction
+    
+    function [63: 0] INS_LOAD;
+        input   [3 : 0] load_type;
+        input   [5 : 0] buf_id;
+        input   [7 : 0] size;
+        input   [11: 0] p_size; // {4'd0, row_num, pix_num}
+        input   [31: 0] st_addr;
+        
+        begin
+            INS_LOAD = {2'b00, load_type, buf_id, p_size, size, st_addr};
+        end
+        
+    endfunction
+    
+    function [63: 0] INS_CALC;
+        input   cut_y, is_new;
+        input   [5 : 0] pe_id;
+        input   [3 : 0] pad_code;
+        input   [7 : 0] pix_num;
+        input   [7 : 0] index_num;
+        
+        begin
+            INS_CALC = {2'b01, 2'b00, cut_y, is_new, pe_id, pad_code, pix_num, index_num, 32'd0};
+        end
+    
+    endfunction
+    
+    function [63: 0] INS_SAVE;
+        input   [3 : 0] save_type;
+        input   [5 : 0] buf_id;
+        input   [11: 0] size;   // size / {4'd0, row_num, pix_num}       
+        input   [7 : 0] shift;
+        input   [31: 0] st_addr;        
+        
+        reg     [7 : 0] temp;
+        
+        begin
+            INS_SAVE = {2'b10, save_type, buf_id, size, shift, st_addr};
+        end
+        
+    endfunction
     
 endpackage

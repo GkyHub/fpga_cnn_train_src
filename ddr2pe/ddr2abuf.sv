@@ -15,7 +15,7 @@ module ddr2abuf#(
     input                   start,
     output                  done,
     input   [2      -1 : 0] conf_trans_type,
-    input   [8      -1 : 0] conf_trans_num,
+    input   [16     -1 : 0] conf_trans_num,
     input   [PE_NUM -1 : 0] conf_mask,
     
     // ddr data stream port
@@ -64,6 +64,8 @@ module ddr2abuf#(
             abuf_tail_buf_r[abuf_pack_cnt_r] <= ddr_data;
         end
     end
+    
+    
     
 //=============================================================================
 // Load data to accumulation buffer
@@ -233,6 +235,19 @@ module ddr2abuf#(
     
     // done signal
     reg     done_r;
+    reg     [16 -1 : 0] byte_cnt_r;
+    
+    always @ (posedge clk) begin
+        if (rst) begin
+            byte_cnt_r <= 0;
+        end
+        else if (start) begin
+            byte_cnt_r <= 0;
+        end
+        else if (ddr_valid && ddr_ready) begin
+            byte_cnt_r <= byte_cnt_r + 32;
+        end
+    end
     
     always @ (posedge clk) begin
         if (rst) begin
@@ -241,29 +256,8 @@ module ddr2abuf#(
         else if (start) begin
             done_r <= 1'b0;
         end
-        else if (ddr_valid) begin
-            case(conf_trans_type)
-            2'b00: begin
-                if (abuf_data_addr_r == conf_trans_num) begin
-                    done_r <= 1'b1;
-                end
-            end
-            2'b01: begin
-                if (abuf_tail_addr_r == conf_trans_num) begin
-                    done_r <= 1'b1;
-                end
-            end
-            2'b10: begin
-                if (bbuf_data_addr_r == conf_trans_num) begin
-                    done_r <= 1'b1;
-                end
-            end
-            2'b11: begin
-                if (bbuf_tail_addr_r == conf_trans_num) begin
-                    done_r <= 1'b1;
-                end
-            end
-            endcase
+        else if (byte_cnt_r > conf_trans_num) begin
+            done_r <= 1'b1;
         end
     end
     

@@ -267,7 +267,7 @@ module top_control#(
                 end
             end
             SAVE_WAIT: begin
-                if (ddr2pe_ins_ready && pe_done[pe_id_r]) begin
+                if (ddr2pe_ins_ready && pe_done[pe2ddr_id_r]) begin
                     save_stat_r <= SAVE_WORK;
                 end
             end
@@ -391,6 +391,9 @@ module top_control#(
     reg     ins_ready_r;
     reg     working_r;
     
+    assign  ins_ready = (conf_stat_r == CONF_WORK || load_stat_r == LOAD_WORK ||
+            calc_stat_r == CALC_WORK || save_stat_r == SAVE_WORK);
+    /*
     always @ (posedge clk) begin
         if (rst) begin
             ins_ready_r <= 1'b0;
@@ -403,6 +406,7 @@ module top_control#(
             ins_ready_r <= 1'b0;
         end
     end
+    */
     
     always @ (posedge clk) begin
         if (rst) begin
@@ -416,7 +420,7 @@ module top_control#(
         end
     end
     
-    assign  ins_ready = ins_ready_r;
+    // assign  ins_ready = ins_ready_r;
     assign  working   = working_r;
     
 endmodule

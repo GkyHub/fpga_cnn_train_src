@@ -170,6 +170,7 @@ module pe2ddr#(
         
         .bbuf_rd_addr   (dg_bbuf_rd_addr    ),
         .bbuf_rd_data   (bbuf_rd_data       ),
+        .bbuf_rd_en     (dg_bbuf_rd_en      ),
         
         .ddr1_data      (ddr1_data          ),
         .ddr1_valid     (ddr1_valid         ),
@@ -267,8 +268,8 @@ module pe2ddr#(
     assign  ddr2_data = ddr2_data_r;
     assign  ddr2_valid = ddr2_valid_r;
     
-    reg     abuf_rd_addr_r;
-    reg     bbuf_rd_addr_r;
+    reg     [ADDR_W -1 : 0] abuf_rd_addr_r;
+    reg     [ADDR_W -1 : 0] bbuf_rd_addr_r;
     
     assign  abuf_rd_en = path_sel ? ab_abuf_rd_en : dg_abuf_rd_en;
     assign  bbuf_rd_en = path_sel ? ab_bbuf_rd_en : dg_bbuf_rd_en;

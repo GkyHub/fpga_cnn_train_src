@@ -1,6 +1,7 @@
 import  GLOBAL_PARAM::*;
 import  INS_CONST::*;
 
+(* dont_touch = "true" *)
 module fpga_cnn_train_top#(
     parameter   PE_NUM  = 32
     )(
@@ -173,8 +174,10 @@ module fpga_cnn_train_top#(
         .rst            (rst                ),
     
         .layer_type     (conf_layer_type    ),
-        .image_width    (conf_in_img_width  ),
+        .in_img_width   (conf_in_img_width  ),
+        .out_img_width  (conf_out_img_width ),
         .in_ch_seg      (conf_in_ch_seg     ),
+        .out_ch_seg     (conf_out_ch_seg    ),
         .depool         (conf_depool        ),
     
         .ins_valid      (ddr2pe_ins_valid   ),

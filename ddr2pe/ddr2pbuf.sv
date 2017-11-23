@@ -15,7 +15,7 @@ module ddr2pbuf#(
     // configuration port
     input                   start,
     output                  done,
-    input   [8      -1 : 0] conf_trans_num,
+    input   [12     -1 : 0] conf_trans_num,
     input   [4      -1 : 0] conf_mode,
     input   [4      -1 : 0] conf_ch_num,    // only for update
     input   [4      -1 : 0] conf_pix_num,   // only for update
@@ -51,7 +51,7 @@ module ddr2pbuf#(
 // forward and backward mode
 //============================================================================= 
     
-    reg     [8      -1 : 0] param_cnt_r;
+    reg     [12     -1 : 0] param_cnt_r;
     wire    [ADDR_W -1 : 0] param_addr;
     wire                    param_wr_en;
     reg     param_last_r;
@@ -61,7 +61,7 @@ module ddr2pbuf#(
             param_cnt_r <= 0;
         end
         else if (ddr2_valid) begin
-            param_cnt_r <= param_cnt_r + 1;
+            param_cnt_r <= param_cnt_r + 32;
         end
     end
     
@@ -72,7 +72,7 @@ module ddr2pbuf#(
         else if (start) begin
             param_last_r <= 1'b0;
         end
-        else if (param_cnt_r == conf_trans_num && ddr2_valid) begin
+        else if (param_cnt_r > conf_trans_num) begin
             param_last_r <= 1'b1;
         end
         else begin
@@ -80,7 +80,7 @@ module ddr2pbuf#(
         end
     end
     
-    assign  param_addr = param_cnt_r;
+    assign  param_addr = param_cnt_r >> 5;
     assign  param_wr_en= ddr2_valid;
 
 //=============================================================================
@@ -187,11 +187,11 @@ module ddr2pbuf#(
                             pbuf_wr_data_r[j][i] <= ddr2_data_d[i][j] ? ddr1_data_d[j][i] : '0;
                         end
                         else begin
-                            pbuf_wr_data_r[j][i] <= ddr2_data_d[i][j];
+                            pbuf_wr_data_r[j][i] <= ddr1_data_d[i][j];
                         end
                     end
                     else begin
-                        pbuf_wr_data_r[j][i] <= ddr1_data[DATA_W*i +: DATA_W];
+                        pbuf_wr_data_r[j][i] <= ddr2_data[DATA_W*i +: DATA_W];
                     end
                 end
                 
